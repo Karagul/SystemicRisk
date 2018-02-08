@@ -3,18 +3,16 @@ import numpy as np
 
 class BankNetwork:
 
-    def __init__(self, L, R, Q, alpha, record=False):
+    def __init__(self, L, R, Q, alpha):
         self.L = L
         self.R = R
         self.Q = Q
         self.alpha = alpha
-        self.record = record
         self.P = None
         self.E = None
-        if record:
-            self.Phist = []
-            self.Rhist = []
-            self.Ehist = []
+        self.liquidator = False
+        self.record = []
+        self.period = 0
 
     def add_liquidator(self):
         n = self.L.shape[0]
@@ -22,6 +20,7 @@ class BankNetwork:
         self.L = np.concatenate((z, self.L), axis=0)
         z = np.zeros((1, n+1))
         self.L = np.concatenate((z, self.L), axis=1)
+        self.liquidator = True
 
     def get_loans(self):
         return np.sum(self.L, axis=0)
@@ -37,9 +36,20 @@ class BankNetwork:
         else:
             self.E = self.R + P + self.get_loans() - self.get_debts()
         self.P = P
-        if self.record:
-            self.Phist.append(self.P)
-            self.Ehist.append(self.E)
 
     def compute_equities(self):
         self.E = self.R + self.P + self.get_loans() - self.get_debts()
+
+    def snap_record(self):
+        rec_dic = dict()
+        rec_dic["L"] = self.L.copy()
+        rec_dic["R"] = self.R.copy()
+        rec_dic["Q"] = self.Q.copy()
+        rec_dic["P"] = self.P.copy()
+        rec_dic["E"] = self.E.copy()
+        self.record.append(rec_dic)
+
+    def rebalance(self):
+
+    def default_check(self):
+
