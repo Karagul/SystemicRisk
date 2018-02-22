@@ -28,9 +28,9 @@ class BankNetwork:
     def add_liquidator(self):
         n = self.L.shape[0]
         z = np.zeros((n, 1))
-        self.L = np.concatenate((z, self.L), axis=0)
-        z = np.zeros((1, n + 1))
         self.L = np.concatenate((z, self.L), axis=1)
+        z = np.zeros((1, n + 1))
+        self.L = np.concatenate((z, self.L), axis=0)
         self.liquidator = True
 
     def net_loans_matrix(self):
