@@ -33,6 +33,9 @@ class BankNetwork:
         self.L = np.concatenate((z, self.L), axis=1)
         self.liquidator = True
 
+    def net_loans_matrix(self):
+        self.L = np.maximum(self.L - self.L.T, np.zeros(shape=self.L.shape))
+
     def get_loans(self):
         return np.sum(self.L, axis=0)
 
