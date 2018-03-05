@@ -39,3 +39,6 @@ print(network.P)
 # Test for equity update
 network.update_equities()
 print(network.get_equities())
+
+# Test for get defaulting
+print(network.get_defaulting())

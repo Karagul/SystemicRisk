@@ -35,6 +35,7 @@ class BankNetwork:
         self.Q = np.concatenate((zq, self.Q))
         zv = np.zeros((1, ))
         self.R = np.concatenate((zv, self.R))
+        self.bar_E = np.concatenate((zv, self.bar_E))
         self.liquidator = True
 
     def net_loans_matrix(self):
