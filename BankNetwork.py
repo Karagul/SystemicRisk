@@ -31,6 +31,10 @@ class BankNetwork:
         self.L = np.concatenate((z, self.L), axis=1)
         z = np.zeros((1, n + 1))
         self.L = np.concatenate((z, self.L), axis=0)
+        zq = np.zeros((1, self.Q.shape[1]))
+        self.Q = np.concatenate((zq, self.Q))
+        zv = np.zeros((1, ))
+        self.R = np.concatenate((zv, self.R))
         self.liquidator = True
 
     def net_loans_matrix(self):
@@ -41,6 +45,12 @@ class BankNetwork:
 
     def get_debts(self):
         return np.sum(self.L, axis=1).T
+
+    def get_equities(self):
+        return self.E
+
+    def get_reserves(self):
+        return self.R
 
     def get_defaulting(self):
         return np.greater_equal(self.bar_E - self.E, 0).astype(np.int64)

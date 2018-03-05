@@ -18,7 +18,7 @@ stdQ = 250
 alpha0 = 0.4
 L = np.random.normal(mL, stdL, (n, n))
 R = R0 * np.ones(shape=(n, ))
-Q = np.random.normal(mQ, stdQ, (n, m))
+Q = np.absolute(np.random.normal(mQ, stdQ, (n, m)))
 alphas = alpha0 * np.ones(shape=(n, ))
 
 # Initialization of the BankNetwork
@@ -29,3 +29,13 @@ network.add_liquidator()
 network.net_loans_matrix()
 print(network.get_loans())
 print(network.get_debts())
+
+# Test for protfolio update
+prices = np.random.normal(10, 1, m)
+network.update_portfolios(prices)
+print(network.Q)
+print(network.P)
+
+# Test for equity update
+network.update_equities()
+print(network.get_equities())
