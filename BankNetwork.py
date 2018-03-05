@@ -47,8 +47,20 @@ class BankNetwork:
     def get_debts(self):
         return np.sum(self.L, axis=1).T
 
+    def get_loans_matrix(self):
+        return self.L
+
     def get_equities(self):
         return self.E
+
+    def get_portfolios(self):
+        return self.P
+
+    def get_psi(self):
+        return self.Psi
+
+    def get_pi(self):
+        return self.Pi
 
     def get_reserves(self):
         return self.R
