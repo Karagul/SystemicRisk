@@ -40,12 +40,19 @@ print(network.P)
 network.update_equities()
 print(network.get_equities())
 
-# Test for get defaulting
+# Test for defaulting and defaulted
+network.update_defaulted()
+network.E[2] = 0
 print(network.get_defaulting())
+print(network.get_defaulted())
+network.update_defaulted()
+print(network.get_defaulted())
+
+
 
 # Test for compute psi et pi
 network.compute_pi()
 network.compute_psi()
-print(network.get_pi())
-print(network.get_psi())
-print(network.L)
+#print(network.get_pi())
+#print(network.get_psi())
+#print(network.L)

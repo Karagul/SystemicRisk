@@ -24,6 +24,7 @@ class BankNetwork:
         self.liquidator = False
         self.record = []
         self.period = 0
+        self.defaulted = np.zeros((self.L.shape[0], ))
 
     def add_liquidator(self):
         n = self.L.shape[0]
@@ -36,6 +37,7 @@ class BankNetwork:
         zv = np.zeros((1, ))
         self.R = np.concatenate((zv, self.R))
         self.bar_E = np.concatenate((zv, self.bar_E))
+        self.defaulted = np.concatenate((zv, self.defaulted))
         self.liquidator = True
 
     def net_loans_matrix(self):
@@ -65,8 +67,15 @@ class BankNetwork:
     def get_reserves(self):
         return self.R
 
+    def get_defaulted(self):
+        return self.defaulted
+
     def get_defaulting(self):
-        return np.greater_equal(self.bar_E - self.E, 0).astype(np.int64)
+        defaulting = np.greater_equal(self.bar_E - self.E, 0).astype(np.int64)
+        return defaulting - self.defaulted
+
+    def update_defaulted(self):
+        self.defaulted = np.maximum(self.defaulted, self.get_defaulting())
 
     def update_portfolios(self, X):
         P = np.dot(self.Q, X)
