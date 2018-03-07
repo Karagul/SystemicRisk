@@ -81,18 +81,39 @@ class BankNetwork:
         P = np.dot(self.Q, X)
         self.P = P
 
+    def update_reserves(self):
+        self.R += self.r * (self.get_loans() - self.get_debts()) + \
+                  np.dot(self.Psi, self.Pi) * self.get_defaulting()
+
+    def update_equities(self):
+        self.E = self.R + self.P + self.get_loans() - self.get_debts()
+
     def compute_psi(self):
         self.Psi = normalize(self.L, axis=0, norm="l1")
 
     def compute_pi(self):
         self.Pi = self.xi * self.P + self.R + self.zeta * self.get_loans()
 
-    def update_reserves(self):
-        self.R += self.r * (self.get_loans() - self.get_debts()) + \
-            np.dot(self.Psi, self.Pi) * self.get_defaulting()
+    def update_liquidator(self):
+        defaulting = self.get_defaulting()
+        loans_defaulting = np.dot(defaulting, self.get_loans())
+        defaulting_index = np.argwhere(defaulting == 1)
+        self.R[0] -= self.zeta * loans_defaulting
+        self.E[0] += (1 - self.zeta) * loans_defaulting
+        for j in defaulting_index :
+            for k in range(0, self.L.shape[0]):
+                self.L[0, k] += self.L[j, k]
 
-    def update_equities(self):
-        self.E = self.R + self.P + self.get_loans() - self.get_debts()
+
+    def liquidate_liquidator(self):
+        defaulting = self.get_defaulting()
+        if defaulting.sum() >= 1 :
+            self.compute_psi()
+            self.compute_pi()
+        
+
+
+    def liquidate_internal(self):
 
     def snap_record(self):
         rec_dic = dict()
