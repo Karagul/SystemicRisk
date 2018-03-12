@@ -8,7 +8,7 @@ importlib.reload(BankNetwork)
 r = 0.03
 xi = 0.7
 zeta = 0.7
-n = 5
+n = 4
 m = 2
 R0 = 1000
 mL = 1000
@@ -45,14 +45,14 @@ network.update_defaulted()
 network.E[2] = 0
 print(network.get_defaulting())
 print(network.get_defaulted())
-network.update_defaulted()
-print(network.get_defaulted())
+# network.update_defaulted()
+#print(network.get_defaulted())
 
-
+network.liquidate_liquidator()
 
 # Test for compute psi et pi
-network.compute_pi()
-network.compute_psi()
+# network.compute_pi()
+# network.compute_psi()
 #print(network.get_pi())
 #print(network.get_psi())
 #print(network.L)

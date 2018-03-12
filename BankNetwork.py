@@ -94,6 +94,15 @@ class BankNetwork:
     def compute_pi(self):
         self.Pi = self.xi * self.P + self.R + self.zeta * self.get_loans()
 
+    def zero_out(self, j):
+        for k in range(0, self.L.shape[0]):
+            self.L[j, k] = 0
+            self.L[k, j] = 0
+        self.E[j] = 0
+        self.Q[j, :] = np.zeros((self.Q.shape[1], ))
+        self.P[j] = 0
+        self.R[j] = 0
+
     def update_liquidator(self):
         defaulting = self.get_defaulting()
         loans_defaulting = np.dot(defaulting, self.get_loans())
@@ -104,16 +113,21 @@ class BankNetwork:
             for k in range(0, self.L.shape[0]):
                 self.L[0, k] += self.L[j, k]
 
-
     def liquidate_liquidator(self):
         defaulting = self.get_defaulting()
+        defaulting_index = np.argwhere(defaulting == 1)
         if defaulting.sum() >= 1 :
             self.compute_psi()
             self.compute_pi()
+            print(self.Pi)
+        self.update_liquidator()
+        for j in defaulting_index:
+            self.zero_out(j)
+
         
 
 
-    def liquidate_internal(self):
+   # def liquidate_internal(self):
 
     def snap_record(self):
         rec_dic = dict()
