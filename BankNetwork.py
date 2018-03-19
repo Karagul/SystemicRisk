@@ -83,7 +83,7 @@ class BankNetwork:
 
     def update_reserves(self):
         self.R += self.r * (self.get_loans() - self.get_debts()) + \
-                  np.dot(self.Psi, self.Pi) * self.get_defaulting()
+                  np.dot(self.Psi, self.Pi * self.get_defaulting())
 
     def update_equities(self):
         self.E = self.R + self.P + self.get_loans() - self.get_debts()
@@ -92,7 +92,10 @@ class BankNetwork:
         self.Psi = normalize(self.L, axis=0, norm="l1")
 
     def compute_pi(self):
-        self.Pi = self.xi * self.P + self.R + self.zeta * self.get_loans()
+        common = self.xi * self.P + self.R
+        #TODO : Indicator for liquidator or not to have only one formula, the case of internal settlement is to be added
+        self.Pi = common + int(self.liquidator) * self.zeta * self.get_loans()
+        self.Pi *= self.get_defaulting()
 
     def zero_out(self, j):
         for k in range(0, self.L.shape[0]):
@@ -105,24 +108,34 @@ class BankNetwork:
 
     def update_liquidator(self):
         defaulting = self.get_defaulting()
-        loans_defaulting = np.dot(defaulting, self.get_loans())
-        defaulting_index = np.argwhere(defaulting == 1)
-        self.R[0] -= self.zeta * loans_defaulting
-        self.E[0] += (1 - self.zeta) * loans_defaulting
-        for j in defaulting_index :
-            for k in range(0, self.L.shape[0]):
-                self.L[0, k] += self.L[j, k]
+        if defaulting.sum() >= 1:
+            loans_defaulting = np.dot(defaulting, self.get_loans())
+            defaulting_index = np.argwhere(defaulting == 1)
+                self.R[0] -= self.zeta * loans_defaulting
+            self.E[0] += (1 - self.zeta) * loans_defaulting
+            for j in defaulting_index :
+                for k in range(0, self.L.shape[0]):
+                    self.L[0, k] += self.L[j, k]
 
-    def liquidate_liquidator(self):
+    def zero_out_defaulting(self):
         defaulting = self.get_defaulting()
         defaulting_index = np.argwhere(defaulting == 1)
-        if defaulting.sum() >= 1 :
-            self.compute_psi()
-            self.compute_pi()
-            print(self.Pi)
-        self.update_liquidator()
         for j in defaulting_index:
             self.zero_out(j)
+
+    def all_updates(self, X):
+        self.update_reserves()
+        self.update_portfolios(X)
+        self.update_equities()
+
+    def stage1(self, X):
+        self.update_liquidator()
+        self.zero_out_defaulting()
+        self.all_updates(X)
+
+    def stage2(self):
+        self.compute_pi()
+        self.compute_psi()
 
         
 
