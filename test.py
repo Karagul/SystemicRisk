@@ -36,12 +36,10 @@ prices = np.random.normal(10, 1, m)
 network.update_portfolios(prices)
 print(network.Q)
 print(network.P)
-network.update_equities()
 
 
 # Test for defaulting and defaulted
 network.update_defaulted()
-network.E[2] = 0
 # Test for equity update
 print(network.get_equities())
 print(network.get_defaulting())

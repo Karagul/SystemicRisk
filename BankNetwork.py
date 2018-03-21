@@ -10,7 +10,6 @@ class BankNetwork:
         self.Q = Q
         self.alpha = alpha
         self.P = None
-        self.E = None
         if not bar_E:
             self.bar_E = np.zeros((self.L.shape[0], ))
         else:
@@ -61,7 +60,7 @@ class BankNetwork:
         return self.L
 
     def get_equities(self):
-        return self.E
+        return self.get_assets() - self.get_debts()
 
     def get_portfolios(self):
         return self.P
@@ -79,7 +78,7 @@ class BankNetwork:
         return self.defaulted
 
     def get_defaulting(self):
-        defaulting = np.greater_equal(self.bar_E - self.E, 0).astype(np.int64)
+        defaulting = np.greater_equal(self.bar_E - self.get_equities(), 0).astype(np.int64)
         return defaulting - self.defaulted
 
     def update_defaulted(self):
@@ -93,8 +92,8 @@ class BankNetwork:
         self.R += self.r * (self.get_loans() - self.get_debts()) + \
                   np.dot(self.Psi, self.Pi * self.get_defaulting())
 
-    def update_equities(self):
-        self.E = self.R + self.P + self.get_loans() - self.get_debts()
+    # def update_equities(self):
+        # self.E = self.R + self.P + self.get_loans() - self.get_debts()
 
     def non_default_loans(self):
         defaulting = self.get_defaulting()
@@ -114,7 +113,6 @@ class BankNetwork:
         for k in range(0, self.L.shape[0]):
             self.L[j, k] = 0
             self.L[k, j] = 0
-        self.E[j] = 0
         self.Q[j, :] = np.zeros((self.Q.shape[1], ))
         self.P[j] = 0
         self.R[j] = 0
@@ -126,7 +124,6 @@ class BankNetwork:
             defaulting_index = np.argwhere(defaulting == 1)
             non_defaulting_index = np.argwhere(defaulting == 0)
             self.R[0] -= self.zeta * loans_defaulting
-            self.E[0] += (1 - self.zeta) * loans_defaulting
             for j in defaulting_index :
                 for k in non_defaulting_index:
                     self.L[0, k] += self.L[j, k]
@@ -140,7 +137,6 @@ class BankNetwork:
     def all_updates(self, X):
         self.update_reserves()
         self.update_portfolios(X)
-        self.update_equities()
 
     def managed_portfolio(self):
         liq_ind = int(self.liquidator)
@@ -171,5 +167,5 @@ class BankNetwork:
         rec_dic["R"] = self.R.copy()
         rec_dic["Q"] = self.Q.copy()
         rec_dic["P"] = self.P.copy()
-        rec_dic["E"] = self.E.copy()
+        rec_dic["E"] = self.get_equities()
         self.record.append(rec_dic)
