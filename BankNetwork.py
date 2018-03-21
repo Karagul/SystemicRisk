@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 from sklearn.preprocessing import normalize
 
 
@@ -42,6 +41,15 @@ class BankNetwork:
 
     def net_loans_matrix(self):
         self.L = np.maximum(self.L - self.L.T, np.zeros(shape=self.L.shape))
+
+    def get_assets(self):
+        return self.R + self.P + self.get_loans()
+
+    def get_m(self):
+        return self.Q.shape[1]
+
+    def get_n(self):
+        return self.R.shape[0] - int(self.liquidator)
 
     def get_loans(self):
         return np.sum(self.L, axis=1).T
@@ -134,6 +142,11 @@ class BankNetwork:
         self.update_portfolios(X)
         self.update_equities()
 
+    def managed_portfolio(self):
+        liq_ind = int(self.liquidator)
+        return np.minimum(self.P[liq_ind:] + self.R[liq_ind:] - self.r * (self.get_debts()[liq_ind:] - self.get_loans()[liq_ind:]),
+                          self.alpha * self.get_assets()[liq_ind:])
+
     def stage1(self, X):
         self.update_liquidator()
         self.zero_out_defaulting()
@@ -142,6 +155,15 @@ class BankNetwork:
     def stage2(self):
         self.compute_pi()
         self.compute_psi()
+
+    def stage3(self):
+        liq_ind = int(self.liquidator)
+        new_p = self.managed_portfolio()
+        management_vec = 1 + (1 / self.P[liq_ind:]) * (new_p - self.P[liq_ind:])
+        management_matrix = np.repeat(management_vec.reshape((self.get_n(), 1)), self.get_m(), axis=1)
+        self.Q[liq_ind:, :] *= management_matrix
+        self.R[liq_ind:] += (self.P[liq_ind:] - new_p)
+        self.P[liq_ind:] = new_p
 
     def snap_record(self):
         rec_dic = dict()
