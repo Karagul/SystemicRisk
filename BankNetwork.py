@@ -44,10 +44,10 @@ class BankNetwork:
         self.L = np.maximum(self.L - self.L.T, np.zeros(shape=self.L.shape))
 
     def get_loans(self):
-        return np.sum(self.L, axis=0)
+        return np.sum(self.L, axis=1).T
 
     def get_debts(self):
-        return np.sum(self.L, axis=1).T
+        return np.sum(self.L, axis=0)
 
     def get_loans_matrix(self):
         return self.L
@@ -88,13 +88,18 @@ class BankNetwork:
     def update_equities(self):
         self.E = self.R + self.P + self.get_loans() - self.get_debts()
 
+    def non_default_loans(self):
+        defaulting = self.get_defaulting()
+        healthy = np.ones(defaulting.shape) - defaulting
+        return np.dot(self.L, healthy)
+
     def compute_psi(self):
         self.Psi = normalize(self.L, axis=0, norm="l1")
 
     def compute_pi(self):
         common = self.xi * self.P + self.R
         #TODO : Indicator for liquidator or not to have only one formula, the case of internal settlement is to be added
-        self.Pi = common + int(self.liquidator) * self.zeta * self.get_loans()
+        self.Pi = common + int(self.liquidator) * self.zeta * self.non_default_loans()
         self.Pi *= self.get_defaulting()
 
     def zero_out(self, j):
@@ -109,12 +114,13 @@ class BankNetwork:
     def update_liquidator(self):
         defaulting = self.get_defaulting()
         if defaulting.sum() >= 1:
-            loans_defaulting = np.dot(defaulting, self.get_loans())
+            loans_defaulting = np.dot(defaulting, self.non_default_loans())
             defaulting_index = np.argwhere(defaulting == 1)
-                self.R[0] -= self.zeta * loans_defaulting
+            non_defaulting_index = np.argwhere(defaulting == 0)
+            self.R[0] -= self.zeta * loans_defaulting
             self.E[0] += (1 - self.zeta) * loans_defaulting
             for j in defaulting_index :
-                for k in range(0, self.L.shape[0]):
+                for k in non_defaulting_index:
                     self.L[0, k] += self.L[j, k]
 
     def zero_out_defaulting(self):
@@ -136,11 +142,6 @@ class BankNetwork:
     def stage2(self):
         self.compute_pi()
         self.compute_psi()
-
-        
-
-
-   # def liquidate_internal(self):
 
     def snap_record(self):
         rec_dic = dict()

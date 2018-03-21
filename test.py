@@ -30,29 +30,26 @@ network.net_loans_matrix()
 print(network.get_loans())
 print(network.get_debts())
 
+
 # Test for protfolio update
 prices = np.random.normal(10, 1, m)
 network.update_portfolios(prices)
 print(network.Q)
 print(network.P)
-
-# Test for equity update
 network.update_equities()
-print(network.get_equities())
+
 
 # Test for defaulting and defaulted
 network.update_defaulted()
 network.E[2] = 0
+# Test for equity update
+print(network.get_equities())
 print(network.get_defaulting())
 print(network.get_defaulted())
-# network.update_defaulted()
-#print(network.get_defaulted())
 
-network.liquidate_liquidator()
+prices = np.random.normal(10, 1, m)
+network.stage2()
+print(network.Pi)
+network.stage1(prices)
 
-# Test for compute psi et pi
-# network.compute_pi()
-# network.compute_psi()
-#print(network.get_pi())
-#print(network.get_psi())
-#print(network.L)
+print(network.L)
