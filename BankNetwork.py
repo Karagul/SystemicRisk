@@ -21,7 +21,7 @@ class BankNetwork:
         self.zeta = zeta
         self.liquidator = False
         self.record = []
-        self.period = 0
+        # self.period = 0
         self.defaulted = np.zeros((self.L.shape[0], ))
 
     def add_liquidator(self):
