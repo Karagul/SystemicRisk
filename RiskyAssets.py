@@ -16,7 +16,10 @@ class GaussianAssets:
         log_factors = pd.DataFrame(data=returns_factors, dtype=np.float64).apply(np.log)
         cum_log_factors = log_factors.cumsum(axis=0)
         factors = cum_log_factors.apply(np.exp).as_matrix()
-        return self.initvalues * factors
+        trajectories = self.initvalues * factors
+        trajectories = np.insert(trajectories, [0], self.initvalues, axis=0)
+        trajectories[trajectories < 0] = 0
+        return trajectories
 
 
 

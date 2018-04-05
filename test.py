@@ -55,3 +55,8 @@ print(network.get_assets())
 network.stage3()
 #print(network.P)
 print(network.get_assets())
+
+
+
+
+

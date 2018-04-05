@@ -10,7 +10,7 @@ class BankNetwork:
         self.Q = Q
         self.alpha = alpha
         self.P = None
-        if not bar_E:
+        if not isinstance(bar_E, np.ndarray):
             self.bar_E = np.zeros((self.L.shape[0], ))
         else:
             self.bar_E = bar_E
