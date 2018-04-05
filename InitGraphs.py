@@ -28,7 +28,7 @@ def vec_gene(v):
 
 def expanded_adjacency(A):
     n = A.shape[0]
-    n_exp = scipy.misc.factorial(n - 1)
+    n_exp = (n * (n - 1)) / 2
     A_exp = np.zeros((n, int(n_exp)))
     col = 0
     for i in range(1, n):
