@@ -79,6 +79,8 @@ class BankNetwork:
 
     def get_defaulting(self):
         defaulting = np.greater_equal(self.bar_E - self.get_equities(), 0).astype(np.int64)
+        if self.liquidator:
+            defaulting[0] = 0
         return defaulting - self.defaulted
 
     def update_defaulted(self):
@@ -130,7 +132,9 @@ class BankNetwork:
 
     def zero_out_defaulting(self):
         defaulting = self.get_defaulting()
+        print(defaulting)
         defaulting_index = np.argwhere(defaulting == 1)
+        print(defaulting_index)
         for j in defaulting_index:
             self.zero_out(j)
 
@@ -146,6 +150,7 @@ class BankNetwork:
     def stage1(self, X):
         self.update_liquidator()
         self.zero_out_defaulting()
+        self.update_defaulted()
         self.all_updates(X)
 
     def stage2(self):

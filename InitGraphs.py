@@ -132,24 +132,50 @@ init_val = np.array([10, 10, 10, 10])
 assets = RiskyAssets.GaussianAssets(mus, sigmas, init_val, T)
 prices = assets.generate()
 
-test_network = BankNetwork.BankNetwork(L, R, Q, alphas, r, xi, zeta, bar_E)
-test_network.add_liquidator()
-test_network.update_portfolios(prices[0, :])
-test_network.compute_psi()
-test_network.compute_pi()
+test = BankNetwork.BankNetwork(L, R, Q, alphas, r, xi, zeta, bar_E)
+test.add_liquidator()
+test.update_portfolios(prices[0, :])
+test.compute_psi()
+test.compute_pi()
+
+
+
+
+
 for t in range(0, T):
-    test_network.stage1(prices[t, :])
-    test_network.stage2()
-    test_network.stage3()
-    test_network.snap_record()
+    test.stage1(prices[t, :])
+    test.stage2()
+    test.stage3()
+    test.snap_record()
 
 
 importlib.reload(BankNetwork)
-test_network = BankNetwork.BankNetwork(L, R, Q, alphas, r, xi, zeta)
-test_network.add_liquidator()
-test_network.update_portfolios(prices[0, :])
-test_network.compute_psi()
-test_network.compute_pi()
-test_network.stage1(prices[0, :])
-test_network.stage2()
-test_network.stage3()
+test = BankNetwork.BankNetwork(L, R, Q, alphas, r, xi, zeta)
+test.add_liquidator()
+test.update_portfolios(prices[0, :])
+test.compute_psi()
+test.compute_pi()
+test.stage1(prices[0, :])
+test.stage2()
+test.stage3()
+
+# Split stage 1
+test.update_liquidator()
+test.zero_out_defaulting()
+# Force default
+test.Q[1, :] = 0
+test.R[1] = 0
+test.all_updates(prices[1, :])
+
+test.stage2()
+test.stage3()
+print(test.get_equities())
+
+
+# Split stage 1
+test.update_liquidator()
+print(test.get_equities())
+test.zero_out_defaulting()
+print(test.get_equities())
+
+print(test.get_loans())
