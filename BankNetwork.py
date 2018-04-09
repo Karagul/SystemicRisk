@@ -24,8 +24,15 @@ class BankNetwork:
         # self.period = 0
         self.defaulted = np.zeros((self.L.shape[0], ))
         self.defaulting = np.zeros((self.L.shape[0],))
-        self.draft_rec = []
-
+        self.lost_value = []
+        # self.draft_rec = []
+        # self.Qbefore=[]
+        # self.pnew = []
+        # self.management_vec = []
+        # self.management_matrix = []
+        # self.Pbefore = []
+        # self.Rbefore = []
+        # self.Rmid = []
 
     def add_liquidator(self):
         n = self.L.shape[0]
@@ -64,7 +71,9 @@ class BankNetwork:
         return self.L
 
     def get_equities(self):
-        return self.get_assets() - self.get_debts()
+        eq = self.get_assets() - self.get_debts()
+        eq[np.absolute(eq) < 1e-10] = 0
+        return eq
 
     def get_portfolios(self):
         return self.P
@@ -104,9 +113,13 @@ class BankNetwork:
     # def update_equities(self):
         # self.E = self.R + self.P + self.get_loans() - self.get_debts()
 
-    def non_default_loans(self):
+    def get_non_defaulting(self):
         defaulting = self.get_defaulting()
         healthy = np.ones(defaulting.shape) - defaulting
+        return healthy
+
+    def non_default_loans(self):
+        healthy = self.get_non_defaulting()
         return np.dot(self.L, healthy)
 
     def compute_psi(self):
@@ -140,7 +153,7 @@ class BankNetwork:
     def zero_out_defaulting(self):
         defaulting = self.get_defaulting()
         defaulting_index = np.argwhere(defaulting == 1)
-        self.draft_rec.append(defaulting_index)
+        # self.draft_rec.append(defaulting_index)
         for j in defaulting_index:
             self.zero_out(j)
 
@@ -150,8 +163,10 @@ class BankNetwork:
 
     def managed_portfolio(self):
         liq_ind = int(self.liquidator)
-        return np.minimum(self.P[liq_ind:] + self.R[liq_ind:] - self.r * (self.get_debts()[liq_ind:] - self.get_loans()[liq_ind:]),
+        pnew = np.minimum(self.P[liq_ind:] + self.R[liq_ind:] - self.r * (self.get_debts()[liq_ind:] - self.get_loans()[liq_ind:]),
                           self.alpha * self.get_assets()[liq_ind:])
+        non_defaulting = self.get_non_defaulting()
+        return pnew * non_defaulting[liq_ind:]
 
     def stage1(self, X):
         self.update_liquidator()
@@ -159,6 +174,9 @@ class BankNetwork:
         self.all_updates(X)
         self.update_defaulted()
         self.update_defaulting()
+        # self.Qbefore.append(self.Q.copy())
+        # self.Pbefore.append(self.P.copy())
+        # self.Rbefore.append(self.P.copy())
 
     def stage2(self):
         self.compute_pi()
@@ -167,8 +185,13 @@ class BankNetwork:
     def stage3(self):
         liq_ind = int(self.liquidator)
         new_p = self.managed_portfolio()
+        # self.pnew.append(new_p)
         management_vec = 1 + (1 / self.P[liq_ind:]) * (new_p - self.P[liq_ind:])
+        np.place(management_vec, np.isnan(management_vec), 0)
+        np.place(management_vec, np.isinf(management_vec), 0)
+        # self.management_vec.append(management_vec)
         management_matrix = np.repeat(management_vec.reshape((self.get_n(), 1)), self.get_m(), axis=1)
+        # self.management_matrix.append(management_matrix)
         self.Q[liq_ind:, :] *= management_matrix
         self.R[liq_ind:] += (self.P[liq_ind:] - new_p)
         self.P[liq_ind:] = new_p
