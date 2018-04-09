@@ -111,7 +111,7 @@ def complete_init(n, ld, eq, tau, m, p0):
     Q = q * random_asset_choice(n, m)
     return L, R, Q
 
-T = 10000
+T = 1000
 n = 9
 ld = 5000
 eq = 10000
@@ -127,7 +127,7 @@ zeta = 0.6
 bar_E = 5000 * np.ones((n, ))
 
 mus = np.array([0, 0, 0, 0])
-sigmas = np.array([0.02, 0.02, 0.02, 0.02])
+sigmas = np.array([0.1, 0.1, 0.1, 0.1])
 init_val = np.array([10, 10, 10, 10])
 assets = RiskyAssets.GaussianAssets(mus, sigmas, init_val, T)
 prices = assets.generate()
@@ -139,14 +139,28 @@ test.compute_psi()
 test.compute_pi()
 
 
-
-
-
 for t in range(0, T):
     test.stage1(prices[t, :])
     test.stage2()
     test.stage3()
     test.snap_record()
+
+k = True
+count = 0
+while k == True:
+    if np.any(np.isnan(test.record[count]["E"])):
+        k = False
+    count += 1
+
+
+count = 0
+while sum(test.record[count]["Defaulting"]) == 0:
+    count += 1
+
+
+
+
+
 
 
 importlib.reload(BankNetwork)

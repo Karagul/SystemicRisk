@@ -23,6 +23,9 @@ class BankNetwork:
         self.record = []
         # self.period = 0
         self.defaulted = np.zeros((self.L.shape[0], ))
+        self.defaulting = np.zeros((self.L.shape[0],))
+        self.draft_rec = []
+
 
     def add_liquidator(self):
         n = self.L.shape[0]
@@ -36,6 +39,7 @@ class BankNetwork:
         self.R = np.concatenate((zv, self.R))
         self.bar_E = np.concatenate((zv, self.bar_E))
         self.defaulted = np.concatenate((zv, self.defaulted))
+        self.defaulting = np.concatenate((zv, self.defaulting))
         self.liquidator = True
 
     def net_loans_matrix(self):
@@ -78,13 +82,16 @@ class BankNetwork:
         return self.defaulted
 
     def get_defaulting(self):
-        defaulting = np.greater_equal(self.bar_E - self.get_equities(), 0).astype(np.int64)
-        if self.liquidator:
-            defaulting[0] = 0
-        return defaulting - self.defaulted
+        return self.defaulting
 
     def update_defaulted(self):
         self.defaulted = np.maximum(self.defaulted, self.get_defaulting())
+
+    def update_defaulting(self):
+        self.defaulting = np.greater_equal(self.bar_E - self.get_equities(), 0).astype(np.int64)
+        if self.liquidator:
+            self.defaulting[0] = 0
+        self.defaulting = np.maximum(self.defaulting - self.defaulted, 0)
 
     def update_portfolios(self, X):
         P = np.dot(self.Q, X)
@@ -92,7 +99,7 @@ class BankNetwork:
 
     def update_reserves(self):
         self.R += self.r * (self.get_loans() - self.get_debts()) + \
-                  np.dot(self.Psi, self.Pi * self.get_defaulting())
+                  np.dot(self.Psi, self.Pi)
 
     # def update_equities(self):
         # self.E = self.R + self.P + self.get_loans() - self.get_debts()
@@ -132,9 +139,8 @@ class BankNetwork:
 
     def zero_out_defaulting(self):
         defaulting = self.get_defaulting()
-        print(defaulting)
         defaulting_index = np.argwhere(defaulting == 1)
-        print(defaulting_index)
+        self.draft_rec.append(defaulting_index)
         for j in defaulting_index:
             self.zero_out(j)
 
@@ -150,8 +156,9 @@ class BankNetwork:
     def stage1(self, X):
         self.update_liquidator()
         self.zero_out_defaulting()
-        self.update_defaulted()
         self.all_updates(X)
+        self.update_defaulted()
+        self.update_defaulting()
 
     def stage2(self):
         self.compute_pi()
@@ -173,4 +180,6 @@ class BankNetwork:
         rec_dic["Q"] = self.Q.copy()
         rec_dic["P"] = self.P.copy()
         rec_dic["E"] = self.get_equities()
+        rec_dic["Defaulting"] = self.get_defaulting()
+        rec_dic["Defaulted"] = self.defaulted.copy()
         self.record.append(rec_dic)
