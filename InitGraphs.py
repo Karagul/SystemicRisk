@@ -3,6 +3,11 @@ import networkx
 import scipy
 import  BankNetwork
 import RiskyAssets
+import importlib
+import matplotlib.pyplot as plt
+import time
+importlib.reload(BankNetwork)
+
 
 
 testgraph = networkx.powerlaw_cluster_graph(10000, 100, 0.1)
@@ -111,23 +116,39 @@ def complete_init(n, ld, eq, tau, m, p0):
     Q = q * random_asset_choice(n, m)
     return L, R, Q
 
-T = 10000
-n = 9
+
+def cycle_init(n, ld, eq, tau, m, p0):
+    E = eq * np.ones((n, ))
+    L = cycle_allocation(n, ld)
+    R = tau * E
+    q = (1 - tau) * eq / p0
+    Q = q * random_asset_choice(n, m)
+    return L, R, Q
+
+importlib.reload(BankNetwork)
+
+start = time.clock()
+
+T = 5000
+n = 1000
 ld = 5000
 eq = 10000
 tau = 0.5
 m = 4
 p0 = 10
-L, R, Q = complete_init(n, ld, eq, tau, m, p0)
+#L, R, Q = complete_init(n, ld, eq, tau, m, p0)
+L, R, Q = cycle_init(n, ld, eq, tau, m, p0)
+# D = networkx.DiGraph(L)
+# networkx.draw(D, pos=networkx.circular_layout(D))
 alpha = 0.25
 alphas = 0.25 * np.ones((n, ))
 r = 0.02
 xi = 0.6
 zeta = 0.6
-bar_E = 0 * np.ones((n, ))
+bar_E = 5000 * np.ones((n, ))
 
 mus = np.array([0, 0, 0, 0])
-sigmas = np.array([0.1, 0.1, 0.1, 0.1])
+sigmas = np.array([0.02, 0.02, 0.02, 0.02])
 init_val = np.array([10, 10, 10, 10])
 assets = RiskyAssets.GaussianAssets(mus, sigmas, init_val, T)
 prices = assets.generate()
@@ -145,38 +166,33 @@ for t in range(0, T):
     test.stage3()
     test.snap_record()
 
+end = time.clock()
+print(end - start)
+
+defaulting = test.get_defaulting_record()
+cum_defaulting = [np.sum(defaulting[:, t]) for t in range(0, defaulting.shape[1])]
+
+
+plt.plot(cum_defaulting)
 
 
 
+rsvs = test.get_equities_record()
+plt.plot(rsvs[0, :])
+plt.plot(rsvs[1, :])
+plt.plot(rsvs[2, :])
+plt.plot(rsvs[3, :])
+plt.plot(rsvs[4, :])
+plt.plot(rsvs[5, :])
+plt.plot(rsvs[6, :])
+plt.plot(rsvs[7, :])
 
 
-importlib.reload(BankNetwork)
-test = BankNetwork.BankNetwork(L, R, Q, alphas, r, xi, zeta)
-test.add_liquidator()
-test.update_portfolios(prices[0, :])
-test.compute_psi()
-test.compute_pi()
-test.stage1(prices[0, :])
-test.stage2()
-test.stage3()
 
-# Split stage 1
-test.update_liquidator()
-test.zero_out_defaulting()
-# Force default
-test.Q[1, :] = 0
-test.R[1] = 0
-test.all_updates(prices[1, :])
-
-test.stage2()
-test.stage3()
-print(test.get_equities())
-
-
-# Split stage 1
-test.update_liquidator()
-print(test.get_equities())
-test.zero_out_defaulting()
-print(test.get_equities())
-
-print(test.get_loans())
+eqts = test.get_equities_record()
+plt.plot(eqts[0, :])
+plt.plot(eqts[1, :])
+plt.plot(eqts[2, :])
+plt.plot(eqts[3, :])
+plt.plot(eqts[4, :])
+plt.plot(eqts[5, :])

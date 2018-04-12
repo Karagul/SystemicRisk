@@ -71,7 +71,7 @@ class BankNetwork:
         return self.L
 
     def get_equities(self):
-        eq = self.get_assets() - self.get_debts()
+        eq = np.maximum(self.get_assets() - self.get_debts(), 0)
         eq[np.absolute(eq) < 1e-10] = 0
         return eq
 
@@ -206,3 +206,21 @@ class BankNetwork:
         rec_dic["Defaulting"] = self.get_defaulting()
         rec_dic["Defaulted"] = self.defaulted.copy()
         self.record.append(rec_dic)
+
+    def get_equities_record(self):
+        T = len(self.record)
+        liq_ind = int(self.liquidator)
+        equities_tuple = tuple([self.record[t]["E"].reshape((self.get_n() + liq_ind, 1)) for t in range(0, T)])
+        return np.concatenate(equities_tuple, axis=1)
+
+    def get_reserves_record(self):
+        T = len(self.record)
+        liq_ind = int(self.liquidator)
+        reserves_tuple = tuple([self.record[t]["R"].reshape((self.get_n() + liq_ind, 1)) for t in range(0, T)])
+        return np.concatenate(reserves_tuple, axis=1)
+
+    def get_defaulting_record(self):
+        T = len(self.record)
+        liq_ind = int(self.liquidator)
+        defaulting_tuple = tuple([self.record[t]["Defaulting"].reshape((self.get_n() + liq_ind, 1)) for t in range(0, T)])
+        return np.concatenate(defaulting_tuple, axis=1)
