@@ -84,3 +84,4 @@ test = Initialization.Initialization(L, r, q, alphas, betas, lambda_star, p0, mu
 test.get_tilde_mus()
 test.get_star_equities()
 test.get_tilde_equities()
+test.set_minimal_equities()
