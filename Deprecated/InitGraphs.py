@@ -1,7 +1,7 @@
 import numpy as np
 import networkx
 import scipy
-import  BankNetwork
+import BankNetwork
 import RiskyAssets
 import importlib
 import matplotlib.pyplot as plt
