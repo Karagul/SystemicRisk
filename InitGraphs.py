@@ -147,10 +147,10 @@ xi = 0.6
 zeta = 0.6
 bar_E = 5000 * np.ones((n, ))
 
-mus = np.array([0, 0, 0, 0])
-sigmas = np.array([0.02, 0.02, 0.02, 0.02])
 init_val = np.array([10, 10, 10, 10])
-assets = RiskyAssets.GaussianAssets(mus, sigmas, init_val, T)
+mus = np.array([0.01, 0.01, 0.01, 0.01])
+sigmas = np.array([0.5, 0.5, 0.5, 0.5])
+assets = RiskyAssets.AdditiveGaussian(mus, sigmas, init_val, T)
 prices = assets.generate()
 
 test = BankNetwork.BankNetwork(L, R, Q, alphas, r, xi, zeta, bar_E)
