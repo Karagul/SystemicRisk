@@ -4,7 +4,7 @@ import importlib
 importlib.reload(BankNetwork)
 
 
-class Initialization:
+class BalanceSheetInit:
 
     def __init__(self, L, r, q, alphas, betas, lambda_star, x0, mus):
         self.L = L
@@ -58,4 +58,3 @@ class Initialization:
     def get_quantitities(self):
         Ps = self.get_portfolios()
         return (1 / self.x0) * self.q * Ps.reshape((Ps.shape[0], 1))
-
