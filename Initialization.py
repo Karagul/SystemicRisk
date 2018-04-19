@@ -14,7 +14,6 @@ class Initialization:
         self.q = q
         self.r = r
         self.E = None
-        self.Q = None
         self.x0 = x0
         self.mus = mus
 
@@ -55,4 +54,8 @@ class Initialization:
 
     def get_reserves(self):
         return self.E - self.get_loans() + self.get_debts() - self.get_portfolios()
+
+    def get_quantitities(self):
+        Ps = self.get_portfolios()
+        return (1 / self.x0) * self.q * Ps.reshape((Ps.shape[0], 1))
 

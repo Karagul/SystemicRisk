@@ -52,6 +52,7 @@ def cycle_init(n, ld, eq, tau, m, p0):
     return L, R, Q
 
 importlib.reload(BankNetwork)
+importlib.reload(Initialization)
 
 start = time.clock()
 
@@ -85,3 +86,6 @@ test.get_tilde_mus()
 test.get_star_equities()
 test.get_tilde_equities()
 test.set_minimal_equities()
+print(test.get_portfolios())
+print(test.get_reserves())
+test.get_quantitities()
