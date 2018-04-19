@@ -23,3 +23,9 @@ class GraphInit:
                 G.add_edge(edge[0], edge[1], weight=di_strength[count])
                 count += 1
         self.graph = G
+
+    def get_weights_matrix(self):
+        return np.asarray(nx.to_numpy_matrix(self.graph))
+
+    def get_loans_matrix(self):
+        return np.maximum(0, self.get_weights_matrix())

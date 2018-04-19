@@ -22,7 +22,7 @@ def random_asset_choice(n, m):
     return Q
 
 
-T = 5000
+T = 1000
 n = 10
 ld = 5000
 eq = 10000
@@ -47,11 +47,10 @@ mean_l, std_l = 5000, 100
 graph = networkx.complete_graph(n)
 graph_init = GI.GraphInit(graph)
 nedges = graph_init.get_nedges()
-bers = np.random.binomial(2, p, nedges)
+bers = 2 * (np.random.binomial(1, p, nedges) - 0.5)
 norms = np.random.normal(mean_l, std_l, nedges)
 graph_init.set_loans(bers * norms)
-
-
+L = graph_init.get_loans_matrix()
 
 
 init_val = x0 * np.ones((m, ))
@@ -61,12 +60,42 @@ assets = RiskyAssets.AdditiveGaussian(mus, sigmas, init_val, T)
 prices = assets.generate()
 
 
-importlib.reload(BalanceSheetInit)
-test = BalanceSheetInit.BalanceSheetInit(L, r, q, alphas, betas, lambda_star, p0, mus)
-test.get_tilde_mus()
-test.get_star_equities()
-test.get_tilde_equities()
-test.set_minimal_equities()
-print(test.get_portfolios())
-print(test.get_reserves())
-test.get_quantitities()
+init_bs = BSI.BalanceSheetInit(L, r, q, alphas, betas, lambda_star, x0, mus)
+# test.get_tilde_mus()
+# test.get_star_equities()
+# test.get_tilde_equities()
+init_bs.set_minimal_equities()
+R = init_bs.get_reserves()
+Q = init_bs.get_quantitities()
+
+test = BankNetwork.BankNetwork(L, R, Q, alphas, r, xi, zeta, bar_E)
+
+test.add_liquidator()
+test.update_portfolios(prices[0, :])
+test.compute_psi()
+test.compute_pi()
+
+
+for t in range(0, T):
+    test.stage1(prices[t, :])
+    test.stage2()
+    test.stage3()
+    test.snap_record()
+
+
+defaulting = test.get_defaulting_record()
+cum_defaulting = [np.sum(defaulting[:, t]) for t in range(0, defaulting.shape[1])]
+
+
+plt.plot(np.cumsum(cum_defaulting))
+
+
+rsvs = test.get_equities_record()
+plt.plot(rsvs[0, :])
+plt.plot(rsvs[1, :])
+plt.plot(rsvs[2, :])
+plt.plot(rsvs[3, :])
+plt.plot(rsvs[4, :])
+plt.plot(rsvs[5, :])
+plt.plot(rsvs[6, :])
+plt.plot(rsvs[7, :])
