@@ -41,6 +41,7 @@ mus = mu * np.ones((m, ))
 sigmas = sigma * np.ones((m, ))
 assets = RiskyAssets.AdditiveGaussian(mus, sigmas, init_val, T)
 prices = assets.generate()
+plt.figure()
 plt.plot(prices[:, 0])
 plt.plot(prices[:, 1])
 
@@ -61,17 +62,18 @@ bar_E = bar_eq * np.ones((n, ))
 
 
 # MC for a given graph structure
-n_mc = 10
+n_mc = 100
 mc_list = []
+
+# graph = networkx.complete_graph(n)
+# graph = networkx.star_graph(n-1)
+graph = networkx.erdos_renyi_graph(n, 0.5)
 
 for s in range(0, n_mc) :
 
     # Choice of the graph structure
-    # graph = networkx.complete_graph(n)
-    graph = networkx.complete_graph(n)
     graph_init = GI.GraphInit(graph)
     nedges = graph_init.get_nedges()
-
     # Random determination of the direction and weights
     p = 0.5
     bers = 2 * (np.random.binomial(1, p, nedges) - 0.5)
@@ -113,3 +115,10 @@ for s in range(0, n_mc):
     defaulting = net.get_defaulting_record()
     cum_defaulting = np.array([np.sum(defaulting[:, t]) for t in range(0, defaulting.shape[1])])
     mc_mean += (1 / n_mc) * np.cumsum(cum_defaulting)
+mc_mean = mc_mean.astype(np.float64)
+
+fig, axes = plt.subplots(2)
+axes[0].plot(mc_circle, label="Circle Graph")
+axes[0].plot(mc_complete, label="Complete Graph")
+axes[0].plot(mc_er, label="Erdos-Reyni p=0.5")
+axes[0].plot(mc_star, label="Star Graph")
