@@ -23,7 +23,7 @@ def random_asset_choice(n, m):
 
 
 T = 1000
-n = 10
+n = 1000
 ld = 5000
 eq = 10000
 tau = 0.5
@@ -44,7 +44,8 @@ lambda_star = 2
 
 p = 0.5
 mean_l, std_l = 5000, 100
-graph = networkx.complete_graph(n)
+# graph = networkx.complete_graph(n)
+graph = networkx.cycle_graph(n)
 graph_init = GI.GraphInit(graph)
 nedges = graph_init.get_nedges()
 bers = 2 * (np.random.binomial(1, p, nedges) - 0.5)
@@ -71,6 +72,8 @@ Q = init_bs.get_quantitities()
 test = BankNetwork.BankNetwork(L, R, Q, alphas, r, xi, zeta, bar_E)
 
 test.add_liquidator()
+
+start  = time.clock()
 test.update_portfolios(prices[0, :])
 test.compute_psi()
 test.compute_pi()
@@ -82,11 +85,13 @@ for t in range(0, T):
     test.stage3()
     test.snap_record()
 
+end = time.clock()
+print(end - start)
 
 defaulting = test.get_defaulting_record()
 cum_defaulting = [np.sum(defaulting[:, t]) for t in range(0, defaulting.shape[1])]
 
-
+plt.figure()
 plt.plot(np.cumsum(cum_defaulting))
 
 

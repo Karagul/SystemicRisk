@@ -1,14 +1,16 @@
 import numpy as np
+import time
 from sklearn.preprocessing import normalize
 
 
 class BankNetwork:
 
-    def __init__(self, L, R, Q, alpha, r, xi, zeta, bar_E=None):
+    def __init__(self, L, R, Q, alpha, r, xi, zeta, bar_E=None, lambda_star=None):
         self.L = L
         self.R = R
         self.Q = Q
         self.alpha = alpha
+        self.lambda_star = lambda_star
         self.P = None
         if not isinstance(bar_E, np.ndarray):
             self.bar_E = np.zeros((self.L.shape[0], ))
@@ -25,6 +27,7 @@ class BankNetwork:
         self.defaulted = np.zeros((self.L.shape[0], ))
         self.defaulting = np.zeros((self.L.shape[0],))
         self.lost_value = []
+        self.track = []
         # self.draft_rec = []
         # self.Qbefore=[]
         # self.pnew = []
@@ -87,6 +90,9 @@ class BankNetwork:
     def get_reserves(self):
         return self.R
 
+    def get_leverage(self):
+        return self.get_assets() / self.get_equities()
+
     def get_defaulted(self):
         return self.defaulted
 
@@ -98,6 +104,10 @@ class BankNetwork:
 
     def update_defaulting(self):
         self.defaulting = np.greater_equal(self.bar_E - self.get_equities(), 0).astype(np.int64)
+        if self.lambda_star:
+            leverages = self.get_leverage()
+            self.defaulting += np.greater(leverages, self.lambda_star).astype(np.int64)
+            self.defaulting[self.defaulting > 1] = 1
         if self.liquidator:
             self.defaulting[0] = 0
         self.defaulting = np.maximum(self.defaulting - self.defaulted, 0)
@@ -109,9 +119,6 @@ class BankNetwork:
     def update_reserves(self):
         self.R += self.r * (self.get_loans() - self.get_debts()) + \
                   np.dot(self.Psi, self.Pi)
-
-    # def update_equities(self):
-        # self.E = self.R + self.P + self.get_loans() - self.get_debts()
 
     def get_non_defaulting(self):
         defaulting = self.get_defaulting()
@@ -127,7 +134,6 @@ class BankNetwork:
 
     def compute_pi(self):
         common = self.xi * self.P + self.R
-        #TODO : Indicator for liquidator or not to have only one formula, the case of internal settlement is to be added
         self.Pi = common + int(self.liquidator) * self.zeta * self.non_default_loans()
         self.Pi *= self.get_defaulting()
 
@@ -140,6 +146,7 @@ class BankNetwork:
         self.R[j] = 0
 
     def update_liquidator(self):
+        start = time.clock()
         defaulting = self.get_defaulting()
         if defaulting.sum() >= 1:
             loans_defaulting = np.dot(defaulting, self.non_default_loans())
@@ -149,11 +156,19 @@ class BankNetwork:
             for j in defaulting_index :
                 for k in non_defaulting_index:
                     self.L[0, k] += self.L[j, k]
+        end = time.clock()
+        self.track.append(end - start)
+
+    def loans_rewiring(self):
+        start = time.clock()
+        defaulting = self.get_defaulting()
+        self.L += np.dot(self.Psi * defaulting, self.L)
+        end = time.clock()
+        self.track.append(end - start)
 
     def zero_out_defaulting(self):
         defaulting = self.get_defaulting()
         defaulting_index = np.argwhere(defaulting == 1)
-        # self.draft_rec.append(defaulting_index)
         for j in defaulting_index:
             self.zero_out(j)
 
@@ -169,14 +184,14 @@ class BankNetwork:
         return pnew * non_defaulting[liq_ind:]
 
     def stage1(self, X):
-        self.update_liquidator()
+        if self.liquidator:
+            self.update_liquidator()
+        else:
+            self.loans_rewiring()
         self.zero_out_defaulting()
         self.all_updates(X)
         self.update_defaulted()
         self.update_defaulting()
-        # self.Qbefore.append(self.Q.copy())
-        # self.Pbefore.append(self.P.copy())
-        # self.Rbefore.append(self.P.copy())
 
     def stage2(self):
         self.compute_pi()
