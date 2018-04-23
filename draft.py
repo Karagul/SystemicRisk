@@ -11,6 +11,7 @@ import GraphInit as GI
 from sklearn.preprocessing import normalize
 importlib.reload(BankNetwork)
 importlib.reload(GI)
+importlib.reload(BSI)
 
 
 
@@ -21,86 +22,94 @@ def random_asset_choice(n, m):
         Q[i, rand[i]] = 1
     return Q
 
-
+# Fundamental parameters
 T = 1000
-n = 1000
-ld = 5000
-eq = 10000
-tau = 0.5
-m = 4
-x0 = 10
-Q = random_asset_choice(n, m)
-q = (1 / np.max(Q)) * Q
-alpha = 0.25
-alphas = alpha * np.ones((n, ))
-beta = 0.75
-betas = beta * np.ones((n, ))
+n = 100
+m = 2
 r = 0.02
-xi = 0.6
-zeta = 0.6
-bar_E = 5000 * np.ones((n, ))
+xi = 0.7
+zeta = 0.7
 lambda_star = 2
 
 
-p = 0.5
-mean_l, std_l = 5000, 100
-# graph = networkx.complete_graph(n)
-graph = networkx.cycle_graph(n)
-graph_init = GI.GraphInit(graph)
-nedges = graph_init.get_nedges()
-bers = 2 * (np.random.binomial(1, p, nedges) - 0.5)
-norms = np.random.normal(mean_l, std_l, nedges)
-graph_init.set_loans(bers * norms)
-L = graph_init.get_loans_matrix()
-
-
+# Draws of risky assets
+x0 = 10
+mu = 0.005
+sigma = 0.5
 init_val = x0 * np.ones((m, ))
-mus = np.array([0.005, 0.005, 0.005, 0.005])
-sigmas = np.array([0.5, 0.5, 0.5, 0.5])
+mus = mu * np.ones((m, ))
+sigmas = sigma * np.ones((m, ))
 assets = RiskyAssets.AdditiveGaussian(mus, sigmas, init_val, T)
 prices = assets.generate()
+plt.plot(prices[:, 0])
+plt.plot(prices[:, 1])
 
 
-init_bs = BSI.BalanceSheetInit(L, r, q, alphas, betas, lambda_star, x0, mus)
-# test.get_tilde_mus()
-# test.get_star_equities()
-# test.get_tilde_equities()
-init_bs.set_minimal_equities()
-R = init_bs.get_reserves()
-Q = init_bs.get_quantitities()
-
-test = BankNetwork.BankNetwork(L, R, Q, alphas, r, xi, zeta, bar_E)
-
-test.add_liquidator()
-
-start  = time.clock()
-test.update_portfolios(prices[0, :])
-test.compute_psi()
-test.compute_pi()
+# Balance sheets initialization parameters
+liquidator = True
+ld = 5000
+eq = 10000
+alpha = 0.25
+beta = 0.75
+bar_eq = 1000
+Q = random_asset_choice(n, m)
+q = (1 / np.max(Q)) * Q
+alphas = alpha * np.ones((n, ))
+betas = beta * np.ones((n, ))
+bar_E = bar_eq * np.ones((n, ))
 
 
-for t in range(0, T):
-    test.stage1(prices[t, :])
-    test.stage2()
-    test.stage3()
-    test.snap_record()
 
-end = time.clock()
-print(end - start)
+# MC for a given graph structure
+n_mc = 10
+mc_list = []
 
-defaulting = test.get_defaulting_record()
-cum_defaulting = [np.sum(defaulting[:, t]) for t in range(0, defaulting.shape[1])]
+for s in range(0, n_mc) :
 
-plt.figure()
-plt.plot(np.cumsum(cum_defaulting))
+    # Choice of the graph structure
+    # graph = networkx.complete_graph(n)
+    graph = networkx.complete_graph(n)
+    graph_init = GI.GraphInit(graph)
+    nedges = graph_init.get_nedges()
 
+    # Random determination of the direction and weights
+    p = 0.5
+    bers = 2 * (np.random.binomial(1, p, nedges) - 0.5)
+    loans_value = ld * np.ones((nedges, ))
+    graph_init.set_loans(bers * loans_value)
+    L = graph_init.get_loans_matrix()
 
-rsvs = test.get_equities_record()
-plt.plot(rsvs[0, :])
-plt.plot(rsvs[1, :])
-plt.plot(rsvs[2, :])
-plt.plot(rsvs[3, :])
-plt.plot(rsvs[4, :])
-plt.plot(rsvs[5, :])
-plt.plot(rsvs[6, :])
-plt.plot(rsvs[7, :])
+    # Initialization of the balance sheets
+    init_bs = BSI.BalanceSheetInit(L, r, q, alphas, betas, lambda_star, x0, mus)
+    E = eq * np.ones((n, ))
+    init_bs.set_manual_equities(E)
+    R = init_bs.get_reserves()
+    Q = init_bs.get_quantitities()
+
+    # Creation of the bank network
+    bank_network = BankNetwork.BankNetwork(L, R, Q, alphas, r, xi, zeta, bar_E)
+
+    if liquidator :
+        bank_network.add_liquidator()
+
+    start  = time.clock()
+    bank_network.update_portfolios(prices[0, :])
+    bank_network.compute_psi()
+    bank_network.compute_pi()
+
+    for t in range(0, T):
+        bank_network.stage1(prices[t, :])
+        bank_network.stage2()
+        bank_network.stage3()
+        bank_network.snap_record()
+
+    mc_list.append(bank_network)
+    end = time.clock()
+    print(end - start)
+
+mc_mean = np.zeros((T, ))
+for s in range(0, n_mc):
+    net = mc_list[s]
+    defaulting = net.get_defaulting_record()
+    cum_defaulting = np.array([np.sum(defaulting[:, t]) for t in range(0, defaulting.shape[1])])
+    mc_mean += (1 / n_mc) * np.cumsum(cum_defaulting)

@@ -37,12 +37,18 @@ class BalanceSheetInit:
         temp = self.r * self.x0 * tilde_mus_inv + self.r - 1
         return (self.get_debts() - self.get_loans()) * temp
 
+    def get_minimal_equities(self):
+        return np.maximum(self.get_star_equities(), self.get_tilde_equities())
+
     def set_minimal_equities(self):
-        self.E = np.maximum(self.get_star_equities(), self.get_tilde_equities())
+        self.E = self.get_minimal_equities()
 
     def set_manual_equities(self, E):
         minimal_equities = np.maximum(self.get_star_equities(), self.get_tilde_equities())
         self.E = np.maximum(minimal_equities, E)
+
+    def augment_equities(self, bonus):
+        self.E += bonus
 
     def get_alpha_thresholds(self):
         return self.r * self.x0 * (self.get_debts() - self.get_loans()) / (self.get_assets() * self.get_tilde_mus())
