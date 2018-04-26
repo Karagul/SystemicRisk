@@ -29,3 +29,11 @@ class GraphInit:
 
     def get_loans_matrix(self):
         return np.maximum(0, self.get_weights_matrix())
+
+    def generate_dibernouilli(self, p):
+        bers = 2 * (np.random.binomial(1, p, self.get_nedges()) - p)
+        return bers
+
+    def generate_loans_values(self, vals, distrib):
+        values = np.random.choice(a=vals, size=self.get_nedges(), p=distrib)
+        return values
