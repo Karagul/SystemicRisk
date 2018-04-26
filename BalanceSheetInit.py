@@ -1,6 +1,7 @@
 import numpy as np
 import BankNetwork
 import importlib
+import scipy.optimize as optimize
 importlib.reload(BankNetwork)
 
 
@@ -64,3 +65,25 @@ class BalanceSheetInit:
     def get_quantitities(self):
         Ps = self.get_portfolios()
         return (1 / self.x0) * self.q * Ps.reshape((Ps.shape[0], 1))
+
+
+class QInit:
+
+    def __init__(self, n, ws):
+        self.m = ws.shape[0]
+        self.n = n
+        self.ws = ws
+        self.qs = np.zeros((n, self.m))
+
+    def get_normalized_entropy(self):
+        non_zeros = self.ws[self.ws > 0]
+        unif = (1 / self.n) * np.ones((self.n, ))
+        max_entropy = - np.sum(np.log(unif) * unif)
+        return (- np.sum(np.log(non_zeros) * non_zeros)) / max_entropy
+
+    def random_asset_choice(self):
+        for i in range(0, self.n):
+            cop = self.ws.copy()
+            np.random.shuffle(cop)
+            self.qs[i, :] = cop
+        return self.qs

@@ -67,7 +67,8 @@ mc_list = []
 
 # graph = networkx.complete_graph(n)
 # graph = networkx.star_graph(n-1)
-graph = networkx.erdos_renyi_graph(n, 0.5)
+# graph = networkx.erdos_renyi_graph(n, 0.3)
+graph = networkx.cycle_graph(n)
 
 for s in range(0, n_mc) :
 
@@ -120,5 +121,15 @@ mc_mean = mc_mean.astype(np.float64)
 fig, axes = plt.subplots(2)
 axes[0].plot(mc_circle, label="Circle Graph")
 axes[0].plot(mc_complete, label="Complete Graph")
-axes[0].plot(mc_er, label="Erdos-Reyni p=0.5")
+axes[0].plot(mc_er, label="Erdos-Reyni p=0.3")
 axes[0].plot(mc_star, label="Star Graph")
+axes[0].legend()
+axes[0].set_ylabel("Mean of cumulative defaults")
+axes[0].set_xlabel("")
+plt.suptitle("100 random draws of edges direction per graph type - 100 banks")
+
+axes[1].plot(prices[:, 0])
+axes[1].plot(prices[:, 1])
+axes[1].set_title("Assets' prices")
+axes[1].set_ylabel("Price")
+axes[1].set_xlabel("Time")
