@@ -23,19 +23,10 @@ class BankNetwork:
         self.zeta = zeta
         self.liquidator = False
         self.record = []
-        # self.period = 0
         self.defaulted = np.zeros((self.L.shape[0], ))
         self.defaulting = np.zeros((self.L.shape[0],))
         self.lost_value = []
         self.track = []
-        # self.draft_rec = []
-        # self.Qbefore=[]
-        # self.pnew = []
-        # self.management_vec = []
-        # self.management_matrix = []
-        # self.Pbefore = []
-        # self.Rbefore = []
-        # self.Rmid = []
 
     def add_liquidator(self):
         n = self.L.shape[0]
@@ -140,8 +131,10 @@ class BankNetwork:
     def zero_out(self, j):
         for k in range(0, self.L.shape[0]):
             self.L[j, k] = 0
+            self.lost_value[-1] += self.L[k, j]
             self.L[k, j] = 0
         self.Q[j, :] = np.zeros((self.Q.shape[1], ))
+        self.lost_value[-1] += (1 - self.xi) * self.P[j]
         self.P[j] = 0
         self.R[j] = 0
 
@@ -184,6 +177,7 @@ class BankNetwork:
         return pnew * non_defaulting[liq_ind:]
 
     def stage1(self, X):
+        self.lost_value.append(0)
         if self.liquidator:
             self.update_liquidator()
         else:
@@ -200,13 +194,10 @@ class BankNetwork:
     def stage3(self):
         liq_ind = int(self.liquidator)
         new_p = self.managed_portfolio()
-        # self.pnew.append(new_p)
         management_vec = 1 + (1 / self.P[liq_ind:]) * (new_p - self.P[liq_ind:])
         np.place(management_vec, np.isnan(management_vec), 0)
         np.place(management_vec, np.isinf(management_vec), 0)
-        # self.management_vec.append(management_vec)
         management_matrix = np.repeat(management_vec.reshape((self.get_n(), 1)), self.get_m(), axis=1)
-        # self.management_matrix.append(management_matrix)
         self.Q[liq_ind:, :] *= management_matrix
         self.R[liq_ind:] += (self.P[liq_ind:] - new_p)
         self.P[liq_ind:] = new_p
@@ -214,6 +205,8 @@ class BankNetwork:
     def snap_record(self):
         rec_dic = dict()
         rec_dic["L"] = self.L.copy()
+        rec_dic["L+"] = self.get_loans().copy()
+        rec_dic["D+"] = self.get_debts().copy()
         rec_dic["R"] = self.R.copy()
         rec_dic["Q"] = self.Q.copy()
         rec_dic["P"] = self.P.copy()
@@ -234,8 +227,31 @@ class BankNetwork:
         reserves_tuple = tuple([self.record[t]["R"].reshape((self.get_n() + liq_ind, 1)) for t in range(0, T)])
         return np.concatenate(reserves_tuple, axis=1)
 
+    def get_portfolios_record(self):
+        T = len(self.record)
+        liq_ind = int(self.liquidator)
+        portfolios_tuple = tuple([self.record[t]["P"].reshape((self.get_n() + liq_ind, 1)) for t in range(0, T)])
+        return np.concatenate(portfolios_tuple, axis=1)
+
+    def get_loans_record(self):
+        T = len(self.record)
+        liq_ind = int(self.liquidator)
+        loans_tuple = tuple([self.record[t]["L+"].reshape((self.get_n() + liq_ind, 1)) for t in range(0, T)])
+        return np.concatenate(loans_tuple, axis=1)
+
+    def get_debts_record(self):
+        T = len(self.record)
+        liq_ind = int(self.liquidator)
+        debts_tuple = tuple([self.record[t]["D+"].reshape((self.get_n() + liq_ind, 1)) for t in range(0, T)])
+        return np.concatenate(debts_tuple, axis=1)
+
     def get_defaulting_record(self):
         T = len(self.record)
         liq_ind = int(self.liquidator)
         defaulting_tuple = tuple([self.record[t]["Defaulting"].reshape((self.get_n() + liq_ind, 1)) for t in range(0, T)])
         return np.concatenate(defaulting_tuple, axis=1)
+
+    def get_defaults_cdf(self):
+        defaulting = self.get_defaulting_record()
+        cum_defaulting = np.cumsum(np.array([np.sum(defaulting[:, t]) for t in range(0, defaulting.shape[1])]))
+        return cum_defaulting

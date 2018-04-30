@@ -22,13 +22,23 @@ class GraphInit:
             for edge in self.graph.edges():
                 G.add_edge(edge[0], edge[1], weight=di_strength[count])
                 count += 1
+        G.add_nodes_from(list(self.graph.nodes))
         self.graph = G
 
     def get_weights_matrix(self):
         return np.asarray(nx.to_numpy_matrix(self.graph))
 
     def get_loans_matrix(self):
-        return np.maximum(0, self.get_weights_matrix())
+        W = self.get_weights_matrix()
+        n = W.shape[0]
+        L = np.zeros((n, n))
+        for i in range(0, n):
+            for j in range(i, n):
+                if W[i, j] < 0:
+                    L[j, i] = - W[i, j]
+                elif W[i, j] > 0:
+                    L[i, j] = W[i, j]
+        return L
 
     def generate_dibernouilli(self, p):
         bers = 2 * (np.random.binomial(1, p, self.get_nedges()) - p)
