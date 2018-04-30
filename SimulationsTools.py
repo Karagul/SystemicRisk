@@ -1,6 +1,7 @@
 import numpy as np
 import BankNetwork
 import importlib
+import networkx as nx
 import BalanceSheetInit as BSI
 import GraphInit as GI
 importlib.reload(BankNetwork)
@@ -66,5 +67,17 @@ def mc_on_graphs(params_dict, prices, x0, mus, graph, n_mc, p, vals, distrib):
     return mc_list
 
 
-# def compare_graphs_structures()
+def compare_graphs(params_dict, prices, x0, mus, graph_dict, n_mc, p, vals, distrib):
+    simus_dict = dict()
+    for key in graph_dict.keys():
+        simus_dict[key] = mc_on_graphs(params_dict, prices, x0, mus, graph_dict[key], n_mc, p, vals, distrib)
+    return simus_dict
 
+
+def compare_ER_graphs(params_dict, prices, x0, mus, er_ps, n_mc, p, vals, distrib):
+    simus_dict = dict()
+    for param in er_ps:
+        graph = nx.erdos_renyi_graph(params_dict["n"], param)
+        graph = GI.GraphInit(graph)
+        simus_dict[param] = mc_on_graphs(params_dict, prices, x0, mus, graph, n_mc, p, vals, distrib)
+    return simus_dict

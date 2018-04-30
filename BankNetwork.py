@@ -27,6 +27,7 @@ class BankNetwork:
         self.defaulting = np.zeros((self.L.shape[0],))
         self.lost_value = []
         self.track = []
+        self.t = 0
 
     def add_liquidator(self):
         n = self.L.shape[0]
@@ -89,6 +90,9 @@ class BankNetwork:
 
     def get_defaulting(self):
         return self.defaulting
+
+    def get_lost_value(self):
+        return self.lost_value
 
     def update_defaulted(self):
         self.defaulted = np.maximum(self.defaulted, self.get_defaulting())
@@ -177,6 +181,7 @@ class BankNetwork:
         return pnew * non_defaulting[liq_ind:]
 
     def stage1(self, X):
+        self.t += 1
         self.lost_value.append(0)
         if self.liquidator:
             self.update_liquidator()
