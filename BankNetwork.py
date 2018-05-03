@@ -5,7 +5,17 @@ from sklearn.preprocessing import normalize
 
 class BankNetwork:
 
-    def __init__(self, L, R, Q, alpha, r, xi, zeta, bar_E=None, lambda_star=None):
+    def __init__(
+            self,
+            L,
+            R,
+            Q,
+            alpha,
+            r,
+            xi,
+            zeta,
+            bar_E=None,
+            lambda_star=None):
         self.L = L
         self.R = R
         self.Q = Q
@@ -98,10 +108,15 @@ class BankNetwork:
         self.defaulted = np.maximum(self.defaulted, self.get_defaulting())
 
     def update_defaulting(self):
-        self.defaulting = np.greater_equal(self.bar_E - self.get_equities(), 0).astype(np.int64)
+        self.defaulting = np.greater_equal(
+            self.bar_E -
+            self.get_equities(),
+            0).astype(
+            np.int64)
         if self.lambda_star:
             leverages = self.get_leverage()
-            self.defaulting += np.greater(leverages, self.lambda_star).astype(np.int64)
+            self.defaulting += np.greater(leverages,
+                                          self.lambda_star).astype(np.int64)
             self.defaulting[self.defaulting > 1] = 1
         if self.liquidator:
             self.defaulting[0] = 0
@@ -113,7 +128,7 @@ class BankNetwork:
 
     def update_reserves(self):
         self.R += self.r * (self.get_loans() - self.get_debts()) + \
-                  np.dot(self.Psi, self.Pi)
+            np.dot(self.Psi, self.Pi)
 
     def get_non_defaulting(self):
         defaulting = self.get_defaulting()
@@ -129,7 +144,8 @@ class BankNetwork:
 
     def compute_pi(self):
         common = self.xi * self.P + self.R
-        self.Pi = common + int(self.liquidator) * self.zeta * self.non_default_loans()
+        self.Pi = common + int(self.liquidator) * \
+            self.zeta * self.non_default_loans()
         self.Pi *= self.get_defaulting()
 
     def zero_out(self, j):
@@ -150,7 +166,7 @@ class BankNetwork:
             defaulting_index = np.argwhere(defaulting == 1)
             non_defaulting_index = np.argwhere(defaulting == 0)
             self.R[0] -= self.zeta * loans_defaulting
-            for j in defaulting_index :
+            for j in defaulting_index:
                 for k in non_defaulting_index:
                     self.L[0, k] += self.L[j, k]
         end = time.clock()
@@ -175,8 +191,12 @@ class BankNetwork:
 
     def managed_portfolio(self):
         liq_ind = int(self.liquidator)
-        pnew = np.minimum(self.P[liq_ind:] + self.R[liq_ind:] - self.r * (self.get_debts()[liq_ind:] - self.get_loans()[liq_ind:]),
-                          self.alpha * self.get_assets()[liq_ind:])
+        pnew = np.minimum(self.P[liq_ind:] +
+                          self.R[liq_ind:] -
+                          self.r *
+                          np.maximum((self.get_debts()[liq_ind:] -
+                                      self.get_loans()[liq_ind:]), 0), self.alpha *
+                          self.get_assets()[liq_ind:])
         non_defaulting = self.get_non_defaulting()
         return pnew * non_defaulting[liq_ind:]
 
@@ -199,10 +219,13 @@ class BankNetwork:
     def stage3(self):
         liq_ind = int(self.liquidator)
         new_p = self.managed_portfolio()
-        management_vec = 1 + (1 / self.P[liq_ind:]) * (new_p - self.P[liq_ind:])
+        management_vec = 1 + \
+            (1 / self.P[liq_ind:]) * (new_p - self.P[liq_ind:])
         np.place(management_vec, np.isnan(management_vec), 0)
         np.place(management_vec, np.isinf(management_vec), 0)
-        management_matrix = np.repeat(management_vec.reshape((self.get_n(), 1)), self.get_m(), axis=1)
+        management_matrix = np.repeat(
+            management_vec.reshape(
+                (self.get_n(), 1)), self.get_m(), axis=1)
         self.Q[liq_ind:, :] *= management_matrix
         self.R[liq_ind:] += (self.P[liq_ind:] - new_p)
         self.P[liq_ind:] = new_p
@@ -223,40 +246,47 @@ class BankNetwork:
     def get_equities_record(self):
         T = len(self.record)
         liq_ind = int(self.liquidator)
-        equities_tuple = tuple([self.record[t]["E"].reshape((self.get_n() + liq_ind, 1)) for t in range(0, T)])
+        equities_tuple = tuple([self.record[t]["E"].reshape(
+            (self.get_n() + liq_ind, 1)) for t in range(0, T)])
         return np.concatenate(equities_tuple, axis=1)
 
     def get_reserves_record(self):
         T = len(self.record)
         liq_ind = int(self.liquidator)
-        reserves_tuple = tuple([self.record[t]["R"].reshape((self.get_n() + liq_ind, 1)) for t in range(0, T)])
+        reserves_tuple = tuple([self.record[t]["R"].reshape(
+            (self.get_n() + liq_ind, 1)) for t in range(0, T)])
         return np.concatenate(reserves_tuple, axis=1)
 
     def get_portfolios_record(self):
         T = len(self.record)
         liq_ind = int(self.liquidator)
-        portfolios_tuple = tuple([self.record[t]["P"].reshape((self.get_n() + liq_ind, 1)) for t in range(0, T)])
+        portfolios_tuple = tuple([self.record[t]["P"].reshape(
+            (self.get_n() + liq_ind, 1)) for t in range(0, T)])
         return np.concatenate(portfolios_tuple, axis=1)
 
     def get_loans_record(self):
         T = len(self.record)
         liq_ind = int(self.liquidator)
-        loans_tuple = tuple([self.record[t]["L+"].reshape((self.get_n() + liq_ind, 1)) for t in range(0, T)])
+        loans_tuple = tuple(
+            [self.record[t]["L+"].reshape((self.get_n() + liq_ind, 1)) for t in range(0, T)])
         return np.concatenate(loans_tuple, axis=1)
 
     def get_debts_record(self):
         T = len(self.record)
         liq_ind = int(self.liquidator)
-        debts_tuple = tuple([self.record[t]["D+"].reshape((self.get_n() + liq_ind, 1)) for t in range(0, T)])
+        debts_tuple = tuple(
+            [self.record[t]["D+"].reshape((self.get_n() + liq_ind, 1)) for t in range(0, T)])
         return np.concatenate(debts_tuple, axis=1)
 
     def get_defaulting_record(self):
         T = len(self.record)
         liq_ind = int(self.liquidator)
-        defaulting_tuple = tuple([self.record[t]["Defaulting"].reshape((self.get_n() + liq_ind, 1)) for t in range(0, T)])
+        defaulting_tuple = tuple([self.record[t]["Defaulting"].reshape(
+            (self.get_n() + liq_ind, 1)) for t in range(0, T)])
         return np.concatenate(defaulting_tuple, axis=1)
 
     def get_defaults_cdf(self):
         defaulting = self.get_defaulting_record()
-        cum_defaulting = np.cumsum(np.array([np.sum(defaulting[:, t]) for t in range(0, defaulting.shape[1])]))
+        cum_defaulting = np.cumsum(
+            np.array([np.sum(defaulting[:, t]) for t in range(0, defaulting.shape[1])]))
         return cum_defaulting

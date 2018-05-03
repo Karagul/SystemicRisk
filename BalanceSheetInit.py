@@ -45,7 +45,11 @@ class BalanceSheetInit:
         return (self.get_debts() - self.get_loans()) * temp
 
     def get_minimal_equities(self):
-        return np.maximum(np.maximum(self.get_star_equities(), self.get_tilde_equities()), self.get_positivity_threshold())
+        return np.maximum(
+            np.maximum(
+                self.get_star_equities(),
+                self.get_tilde_equities()),
+            self.get_positivity_threshold())
 
     def set_minimal_equities(self):
         self.E = self.get_minimal_equities()
@@ -58,10 +62,12 @@ class BalanceSheetInit:
         self.E += bonus
 
     def get_alpha_thresholds(self):
-        return self.r * self.x0 * (self.get_debts() - self.get_loans()) / (self.get_assets() * self.get_tilde_mus())
+        return self.r * self.x0 * \
+            (self.get_debts() - self.get_loans()) / (self.get_assets() * self.get_tilde_mus())
 
     def get_portfolios(self):
-        vec1 = np.maximum(self.E + (1 - self.r) * (self.get_debts() - self.get_loans()), 0)
+        vec1 = self.E + (self.get_debts() - self.get_loans()) - \
+            self.r * np.maximum((self.get_debts() - self.get_loans()), 0)
         vec2 = self.alphas * self.get_assets()
         return np.minimum(vec1, vec2)
 

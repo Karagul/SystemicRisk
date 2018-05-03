@@ -161,3 +161,6 @@ R = init_bs.get_reserves()
 P = init_bs.get_portfolios()
 Lplus = init_bs.get_loans()
 Dplus = init_bs.get_debts()
+
+
+plt.hist(R)

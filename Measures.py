@@ -3,7 +3,8 @@ import numpy as np
 
 def defaults_cdf(net):
     defaulting = net.get_defaulting_record()
-    cum_defaulting = np.cumsum(np.array([np.sum(defaulting[:, t]) for t in range(0, defaulting.shape[1])]))
+    cum_defaulting = np.cumsum(
+        np.array([np.sum(defaulting[:, t]) for t in range(0, defaulting.shape[1])]))
     return cum_defaulting
 
 
