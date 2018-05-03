@@ -109,3 +109,5 @@ def compare_ER_graphs(
         simus_dict[param] = mc_on_graphs(
             params_dict, prices, x0, mus, graph, n_mc, p, vals, distrib)
     return simus_dict
+
+

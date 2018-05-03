@@ -37,7 +37,7 @@ r_annual = 0.1
 params["r"] = ST.daily_compound(r_annual, 365)
 params["xi"] = 0.5
 params["zeta"] = 0.5
-params["lambda_star"] = 3
+params["lambda_star"] = 5
 
 
 ### RISKY ASSETS PARAMETERS
@@ -59,8 +59,9 @@ for i in range(0, m):
 # ws = (1 / m) * np.ones((m, ))
 # Min diversification
 ws = np.zeros((m, ))
-for i in range(0, m//2):
-    ws[i] = 1 / (m // 2)
+#for i in range(0, m//2):
+    #ws[i] = 1 / (m // 2)
+ws[0] = 1
 qinit = BSI.QInit(n, ws)
 params["q"] = qinit.random_asset_choice()
 
@@ -107,7 +108,7 @@ er_comparisons = ST.compare_ER_graphs(params, prices, x0, mus, er_params, n_mc, 
 er_defaults_cdf = Measures.average_defaults_cdf_dict(er_comparisons)
 Viz.plot_comparison_prices(er_defaults_cdf,
                            prices,
-                           suptitle="ER graphs with differents ps - lambda_star="
+                           suptitle="ER graphs, differents ps - Minimum asset diversification - lambda_star="
                                     + str(params["lambda_star"])
                                     + "- 100 banks - 10 simus per graph")
 
@@ -138,7 +139,7 @@ cycle_graph = GI.GraphInit(nx.cycle_graph(n))
 complete_graph = GI.GraphInit(nx.complete_graph(n))
 star_graph = GI.GraphInit(nx.star_graph(n-1))
 er_graph = GI.GraphInit(nx.erdos_renyi_graph(n, 0.05))
-graph = cycle_graph
+graph = er_graph
 # On average 1 edge out of 2 is negative and 1 out of 2 is positive
 p = 0.5
 # Values of loans and their respective probabilities
@@ -161,6 +162,7 @@ R = init_bs.get_reserves()
 P = init_bs.get_portfolios()
 Lplus = init_bs.get_loans()
 Dplus = init_bs.get_debts()
+Acal = init_bs.get_assets()
 
 
-plt.hist(R)
+plt.hist(Lplus/Acal)

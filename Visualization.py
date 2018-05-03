@@ -11,6 +11,14 @@ def plot_comparison(comparison_dict, ax=None):
         ax.legend()
 
 
+def plot_init_comparison(comparison_dict, ax=None):
+    if not ax:
+        fig, ax = plt.subplots(1)
+    for key in comparison_dict.keys():
+        ax.hist(comparison_dict[key], label=key)
+        ax.legend()
+
+
 def plot_assets(prices, ax=None):
     if not ax:
         fig, ax = plt.subplots(1)
