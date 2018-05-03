@@ -1,15 +1,19 @@
+# Third party modules
 import numpy as np
 import networkx as nx
 import BankNetwork
 import RiskyAssets
 import importlib
 import matplotlib.pyplot as plt
-import time
+
+# Local imports
 import BalanceSheetInit as BSI
 import GraphInit as GI
 import SimulationsTools as ST
 import Measures
 import Visualization as Viz
+
+
 importlib.reload(ST)
 importlib.reload(Measures)
 importlib.reload(BankNetwork)
@@ -33,7 +37,7 @@ r_annual = 0.1
 params["r"] = ST.daily_compound(r_annual, 365)
 params["xi"] = 0.5
 params["zeta"] = 0.5
-params["lambda_star"] = 5
+params["lambda_star"] = 3
 
 
 ### RISKY ASSETS PARAMETERS
@@ -79,6 +83,7 @@ params["betas"] = beta * np.ones((n, ))
 params["bar_E"] = bar_e * np.ones((n, ))
 
 
+
 ### RANDOM GRAPH INITIALIZATION
 # On average 1 edge out of 2 is negative and 1 out of 2 is positive
 p = 0.5
@@ -103,7 +108,7 @@ er_defaults_cdf = Measures.average_defaults_cdf_dict(er_comparisons)
 Viz.plot_comparison_prices(er_defaults_cdf,
                            prices,
                            suptitle="ER graphs with differents ps - lambda_star="
-                                    + str(params["lambda_start"])
+                                    + str(params["lambda_star"])
                                     + "- 100 banks - 10 simus per graph")
 
 
@@ -119,23 +124,40 @@ graphs_dict["ER - 0.05"] = GI.GraphInit(er_graph)
 graphs_dict["Complete"] = GI.GraphInit(complete_graph)
 graph_comparisons = ST.compare_graphs(params, prices, x0, mus, graphs_dict, n_mc, p, vals, distrib)
 graph_comparisons_defaults = Measures.average_defaults_cdf_dict(graph_comparisons)
-Viz.plot_comparison_prices(er_defaults_cdf,
+Viz.plot_comparison_prices(graph_comparisons_defaults,
                            prices,
                            suptitle="Graph comparisons - lambda_star="
-                                    + str(params["lambda_start"])
+                                    + str(params["lambda_star"])
                                     + "- 100 banks - 10 simus per graph")
 
 
 
 
-fig, axes = plt.subplots(2)
-for key in er_defaults_cdf:
-    axes[0].plot(er_defaults_cdf[key], label="p=" + str(key))
-    axes[0].legend()
-for i in range(0, m):
-    axes[1].plot(prices[:, i])
-plt.suptitle("Comparison ER graphs params - 100 banks - 10 simus per graph")
-axes[1].set_xlabel("time")
-axes[1].set_ylabel("price")
-axes[0].set_ylabel("defaults CDF")
-plt.show()
+### STATS DESC ON BALANCE SHEETS INITIALIZATION
+cycle_graph = GI.GraphInit(nx.cycle_graph(n))
+complete_graph = GI.GraphInit(nx.complete_graph(n))
+star_graph = GI.GraphInit(nx.star_graph(n-1))
+er_graph = GI.GraphInit(nx.erdos_renyi_graph(n, 0.05))
+graph = cycle_graph
+# On average 1 edge out of 2 is negative and 1 out of 2 is positive
+p = 0.5
+# Values of loans and their respective probabilities
+vals = np.array([l])
+distrib = np.array([1])
+L = ST.random_allocation(graph, p, vals, distrib)
+
+init_bs = BSI.BalanceSheetInit(L,
+                               r=ST.daily_compound(r_annual, 365),
+                               q=params["q"],
+                               alphas=0.25 * np.ones((n, )),
+                               betas=1 * np.ones((n, )),
+                               lambda_star=5,
+                               x0=x0,
+                               mus=mus)
+E = params["e"] * np.ones((params["n"],))
+init_bs.set_manual_equities(E)
+E = init_bs.get_equities()
+R = init_bs.get_reserves()
+P = init_bs.get_portfolios()
+Lplus = init_bs.get_loans()
+Dplus = init_bs.get_debts()
