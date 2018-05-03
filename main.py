@@ -9,6 +9,7 @@ import BalanceSheetInit as BSI
 import GraphInit as GI
 import SimulationsTools as ST
 import Measures
+import Visualization as Viz
 importlib.reload(ST)
 importlib.reload(Measures)
 importlib.reload(BankNetwork)
@@ -32,7 +33,7 @@ r_annual = 0.1
 params["r"] = ST.daily_compound(r_annual, 365)
 params["xi"] = 0.5
 params["zeta"] = 0.5
-params["lambda_star"] = 10
+params["lambda_star"] = 5
 
 
 ### RISKY ASSETS PARAMETERS
@@ -96,11 +97,37 @@ mc_list = ST.mc_on_graphs(params, prices, x0, mus, graph, n_mc, p, vals, distrib
 
 
 # Comparison of several Erdos Reyni graphs
-er_params = [0.01, 0.05, 0.2, 0.5, 0.8]
+er_params = [0.01, 0.05, 0.2, 0.5, 0.8, 1]
 er_comparisons = ST.compare_ER_graphs(params, prices, x0, mus, er_params, n_mc, p, vals, distrib)
-
-
 er_defaults_cdf = Measures.average_defaults_cdf_dict(er_comparisons)
+Viz.plot_comparison_prices(er_defaults_cdf,
+                           prices,
+                           suptitle="ER graphs with differents ps - lambda_star="
+                                    + str(params["lambda_start"])
+                                    + "- 100 banks - 10 simus per graph")
+
+
+# Comparison of several graph structures
+graphs_dict = dict()
+cycle_graph = nx.cycle_graph(n)
+complete_graph = nx.complete_graph(n)
+star_graph = nx.star_graph(n-1)
+er_graph = nx.erdos_renyi_graph(n, 0.05)
+graphs_dict["Circle"] = GI.GraphInit(cycle_graph)
+graphs_dict["Star"] = GI.GraphInit(star_graph)
+graphs_dict["ER - 0.05"] = GI.GraphInit(er_graph)
+graphs_dict["Complete"] = GI.GraphInit(complete_graph)
+graph_comparisons = ST.compare_graphs(params, prices, x0, mus, graphs_dict, n_mc, p, vals, distrib)
+graph_comparisons_defaults = Measures.average_defaults_cdf_dict(graph_comparisons)
+Viz.plot_comparison_prices(er_defaults_cdf,
+                           prices,
+                           suptitle="Graph comparisons - lambda_star="
+                                    + str(params["lambda_start"])
+                                    + "- 100 banks - 10 simus per graph")
+
+
+
+
 fig, axes = plt.subplots(2)
 for key in er_defaults_cdf:
     axes[0].plot(er_defaults_cdf[key], label="p=" + str(key))
