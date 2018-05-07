@@ -41,3 +41,18 @@ def plot_comparison_prices(comparison_dict,
     axes[1].set_ylabel(y2)
     axes[1].set_xlabel(x2)
 
+
+def plot_init_hists(comparison_dict, xlab="Equity"):
+    fig, axes = plt.subplots(2, 2)
+    keys_list = list(comparison_dict.keys())
+    nsims = comparison_dict[keys_list[0]].shape[0]
+    plt.suptitle("Comparisons of graphs structures for initial " + xlab)
+    for i in [0, 1]:
+        for j in [0, 1]:
+            axes[i, j].hist(comparison_dict[keys_list[i*2 + j]])
+            axes[i, j].set_title(keys_list[i*2 + j])
+    axes[0, 0].set_ylabel("n draws (out of " + str(nsims) + ")")
+    axes[1, 0].set_ylabel("n draws (out of " + str(nsims) + ")")
+    axes[1, 0].set_xlabel(xlab)
+    axes[1, 1].set_xlabel(xlab)
+    plt.show()

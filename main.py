@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 # Local imports
 import BalanceSheetInit as BSI
 import GraphInit as GI
+import InitAnalysis as InitA
 import SimulationsTools as ST
 import Measures
 import Visualization as Viz
@@ -18,6 +19,8 @@ importlib.reload(ST)
 importlib.reload(Measures)
 importlib.reload(BankNetwork)
 importlib.reload(GI)
+importlib.reload(InitA)
+importlib.reload(Viz)
 importlib.reload(BSI)
 
 
@@ -139,30 +142,37 @@ cycle_graph = GI.GraphInit(nx.cycle_graph(n))
 complete_graph = GI.GraphInit(nx.complete_graph(n))
 star_graph = GI.GraphInit(nx.star_graph(n-1))
 er_graph = GI.GraphInit(nx.erdos_renyi_graph(n, 0.05))
-graph = er_graph
+graphs_dict = {}
+graphs_dict["ER 0.05"] = er_graph
+graphs_dict["Complete"] = complete_graph
+graphs_dict["Star"] = star_graph
+graphs_dict["Circle"] = cycle_graph
 # On average 1 edge out of 2 is negative and 1 out of 2 is positive
 p = 0.5
 # Values of loans and their respective probabilities
 vals = np.array([l])
 distrib = np.array([1])
-L = ST.random_allocation(graph, p, vals, distrib)
+n_mc = 1000
 
-init_bs = BSI.BalanceSheetInit(L,
-                               r=ST.daily_compound(r_annual, 365),
-                               q=params["q"],
-                               alphas=0.25 * np.ones((n, )),
-                               betas=1 * np.ones((n, )),
-                               lambda_star=5,
-                               x0=x0,
-                               mus=mus)
-E = params["e"] * np.ones((params["n"],))
-init_bs.set_manual_equities(E)
-E = init_bs.get_equities()
-R = init_bs.get_reserves()
-P = init_bs.get_portfolios()
-Lplus = init_bs.get_loans()
-Dplus = init_bs.get_debts()
-Acal = init_bs.get_assets()
+compinit = InitA.compare_initializations(params,
+                                  x0,
+                                  mus,
+                                  graphs_dict,
+                                  n_mc,
+                                  p,
+                                  vals,
+                                  distrib)
 
+compinit_equities = InitA.get_consodict_equities(compinit)
+compinit_loans = InitA.get_consodict_loans(compinit)
+compinit_debts = InitA.get_consodict_debts(compinit)
+compinit_assets = InitA.get_consodict_assets(compinit)
+compinit_reserves = InitA.get_consodict_reserves(compinit)
+compinit_portfolios = InitA.get_consodict_portfolios(compinit)
 
-plt.hist(Lplus/Acal)
+Viz.plot_init_hists(compinit_portfolios, "portfolios values")
+Viz.plot_init_hists(compinit_equities, "equities")
+Viz.plot_init_hists(compinit_loans, "loans")
+Viz.plot_init_hists(compinit_debts, "debts")
+Viz.plot_init_hists(compinit_reserves, "reserves")
+Viz.plot_init_hists(compinit_assets, "assets")
