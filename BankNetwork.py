@@ -104,6 +104,12 @@ class BankNetwork:
     def get_lost_value(self):
         return self.lost_value
 
+    def get_nodes_outdegree(self):
+        return (self.L > 0).astype(int).sum(axis=1)
+
+    def get_nodes_indegree(self):
+        return (self.L > 0).astype(int).sum(axis=0)
+
     def update_defaulted(self):
         self.defaulted = np.maximum(self.defaulted, self.get_defaulting())
 
@@ -232,15 +238,18 @@ class BankNetwork:
 
     def snap_record(self):
         rec_dic = dict()
-        rec_dic["L"] = self.L.copy()
-        rec_dic["L+"] = self.get_loans().copy()
-        rec_dic["D+"] = self.get_debts().copy()
-        rec_dic["R"] = self.R.copy()
-        rec_dic["Q"] = self.Q.copy()
-        rec_dic["P"] = self.P.copy()
-        rec_dic["E"] = self.get_equities()
+        # rec_dic["L"] = self.L.copy()
+        # rec_dic["L+"] = self.get_loans().copy()
+        # rec_dic["D+"] = self.get_debts().copy()
+        # rec_dic["R"] = self.R.copy()
+        # rec_dic["Q"] = self.Q.copy()
+        # rec_dic["P"] = self.P.copy()
+        # rec_dic["E"] = self.get_equities()
         rec_dic["Defaulting"] = self.get_defaulting()
-        rec_dic["Defaulted"] = self.defaulted.copy()
+        rec_dic["Lost_value"] = self.lost_value[-1]
+        rec_dic["Out_degree"] = self.get_nodes_outdegree()
+        rec_dic["In_degree"] = self.get_nodes_indegree()
+        # rec_dic["Defaulted"] = self.defaulted.copy()
         self.record.append(rec_dic)
 
     def get_equities_record(self):
@@ -284,6 +293,20 @@ class BankNetwork:
         defaulting_tuple = tuple([self.record[t]["Defaulting"].reshape(
             (self.get_n() + liq_ind, 1)) for t in range(0, T)])
         return np.concatenate(defaulting_tuple, axis=1)
+
+    def get_indegree_record(self):
+        T = len(self.record)
+        liq_ind = int(self.liquidator)
+        indegree_tuple = tuple([self.record[t]["In_degree"].reshape(
+            (self.get_n() + liq_ind, 1)) for t in range(0, T)])
+        return np.concatenate(indegree_tuple, axis=1)
+
+    def get_outdegree_record(self):
+        T = len(self.record)
+        liq_ind = int(self.liquidator)
+        outdegree_tuple = tuple([self.record[t]["In_degree"].reshape(
+            (self.get_n() + liq_ind, 1)) for t in range(0, T)])
+        return np.concatenate(outdegree_tuple, axis=1)
 
     def get_defaults_cdf(self):
         defaulting = self.get_defaulting_record()

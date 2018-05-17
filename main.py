@@ -4,6 +4,7 @@ import networkx as nx
 import BankNetwork
 import RiskyAssets
 import importlib
+import time
 import matplotlib.pyplot as plt
 
 # Local imports
@@ -30,22 +31,22 @@ params = dict()
 
 #### Fundamental parameters
 n = 100
-m = 4
-T = 1000
+m = 2
+T = 2000
 params["m"] = m
 params["T"] = T
 params["n"] = n
 # params["r"] = 0.02
-r_annual = 0.1
+r_annual = 0.05
 params["r"] = ST.daily_compound(r_annual, 365)
 params["xi"] = 0.5
 params["zeta"] = 0.5
-params["lambda_star"] = 5
+params["lambda_star"] = 10
 
 
 ### RISKY ASSETS PARAMETERS
 x0 = 10
-mu = 0.005
+mu = 0.01
 sigma = 0.5
 init_val = x0 * np.ones((m, ))
 mus = mu * np.ones((m, ))
@@ -57,14 +58,15 @@ for i in range(0, m):
     plt.plot(prices[:, i])
 
 
+
 ### CHOICE OF RISKY ASSETS
 # Max diversification
 # ws = (1 / m) * np.ones((m, ))
 # Min diversification
 ws = np.zeros((m, ))
-#for i in range(0, m//2):
-    #ws[i] = 1 / (m // 2)
-ws[0] = 1
+for i in range(0, m//2):
+    ws[i] = 1 / (m // 2)
+# ws[0] = 1
 qinit = BSI.QInit(n, ws)
 params["q"] = qinit.random_asset_choice()
 
@@ -72,7 +74,7 @@ params["q"] = qinit.random_asset_choice()
 ### BALANCE SHEET INITIALIZATION PARAMETERS
 params["liquidator"] = True
 # Nominal value of all loans (and debts)
-l = 10000
+l = 1000
 params["l"] = l
 # Minimal equity for all banks
 params["e"] = 10000
@@ -99,10 +101,58 @@ distrib = np.array([1])
 graph = nx.erdos_renyi_graph(n, 0.01)
 # graph = nx.complete_graph(n)
 graph = GI.GraphInit(graph)
-# Number of Monte Carlo iterations
-n_mc = 10
+# Number of Monte Carlo iterations for
+n_mc_graph = 10
 # MC on random allocations on graph
-mc_list = ST.mc_on_graphs(params, prices, x0, mus, graph, n_mc, p, vals, distrib)
+start = time.clock()
+# mc_list = ST.mc_on_graphs(params, prices, x0, mus, graph, n_mc, p, vals, distrib)
+end = time.clock()
+print(end - start)
+
+
+
+
+
+### MC on prices
+# On average 1 edge out of 2 is negative and 1 out of 2 is positive
+p = 0.5
+# Values of loans and their respective probabilities
+vals = np.array([2*l/0.01])
+distrib = np.array([1])
+# Graph structure
+#graph = nx.cycle_graph(n)
+graph = nx.erdos_renyi_graph(n, 0.01)
+# graph = nx.complete_graph(n)
+graph = GI.GraphInit(graph)
+# Number of Monte Carlo iterations for
+n_mc_graph = 1
+n_mc_prices = 1000
+prices_list = ST.generate_prices(x0, m, mu, sigma, T, n_mc_prices)
+er_ps = [0.01, 0.05, 0.1, 0.2]
+path = "E:/Simulations/ER0.5_Leverage10/"
+start = time.clock()
+# mc_dict = ST.mc_on_prices_ergraphs(params, prices_list, x0, mus, er_ps, n_mc_graph, p, vals, distrib)
+mc_prices = ST.mc_on_prices(params, prices_list, x0, mus, graph, n_mc_graph, p, vals, distrib, save_out=path)
+end = time.clock()
+print(end - start)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # Comparison of several Erdos Reyni graphs

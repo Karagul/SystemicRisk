@@ -38,3 +38,4 @@ def average_losses_cdf_dict(dict_net_list):
 def average_defaults_cdf_dict(dict_net_list):
     cdf_dict = {k: average_defaults_cdf(v) for k, v in dict_net_list.items()}
     return cdf_dict
+
