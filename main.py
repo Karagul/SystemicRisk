@@ -32,7 +32,7 @@ params = dict()
 #### Fundamental parameters
 n = 100
 m = 2
-T = 2000
+T = 3000
 params["m"] = m
 params["T"] = T
 params["n"] = n
@@ -116,33 +116,55 @@ print(end - start)
 ### MC on prices
 # On average 1 edge out of 2 is negative and 1 out of 2 is positive
 p = 0.5
+p_er = 0.1
+
+er_ps = [0.01, 0.05, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45]
+
+for p_er in er_ps :
+
 # Values of loans and their respective probabilities
-vals = np.array([2*l/0.01])
+    vals = np.array([2*l/p_er])
+    distrib = np.array([1])
+# Graph structure
+#graph = nx.cycle_graph(n)
+    graph = nx.erdos_renyi_graph(n, p_er)
+# graph = nx.complete_graph(n)
+    graph = GI.GraphInit(graph)
+# Number of Monte Carlo iterations for
+    n_mc_graph = 1
+    n_mc_prices = 1000
+    prices_list = ST.generate_prices(x0, m, mu, sigma, T, n_mc_prices)
+    path = "E:/Simulations/ER" + str(p_er) + "_Leverage" + str(params["lambda_star"]) + "/"
+    start = time.clock()
+#    mc_dict = ST.mc_on_prices_ergraphs(params, prices_list, x0, mus, er_ps, n_mc_graph, p, vals, distrib)
+    mc_prices = ST.mc_on_prices(params, prices_list, x0, mus, graph, n_mc_graph, p, vals, distrib, save_out=path)
+    end = time.clock()
+    print(end - start)
+
+
+
+
+
+
+
+p_er=0.5
+vals = np.array([2*l/p_er])
 distrib = np.array([1])
 # Graph structure
 #graph = nx.cycle_graph(n)
-graph = nx.erdos_renyi_graph(n, 0.01)
+graph = nx.erdos_renyi_graph(n, p_er)
 # graph = nx.complete_graph(n)
 graph = GI.GraphInit(graph)
 # Number of Monte Carlo iterations for
 n_mc_graph = 1
 n_mc_prices = 1000
 prices_list = ST.generate_prices(x0, m, mu, sigma, T, n_mc_prices)
-er_ps = [0.01, 0.05, 0.1, 0.2]
-path = "E:/Simulations/ER0.5_Leverage10/"
+path = "E:/Simulations/ER" + str(p_er) + "_Leverage" + str(params["lambda_star"]) + "/"
 start = time.clock()
-# mc_dict = ST.mc_on_prices_ergraphs(params, prices_list, x0, mus, er_ps, n_mc_graph, p, vals, distrib)
+#    mc_dict = ST.mc_on_prices_ergraphs(params, prices_list, x0, mus, er_ps, n_mc_graph, p, vals, distrib)
 mc_prices = ST.mc_on_prices(params, prices_list, x0, mus, graph, n_mc_graph, p, vals, distrib, save_out=path)
 end = time.clock()
 print(end - start)
-
-
-
-
-
-
-
-
 
 
 

@@ -86,9 +86,9 @@ def generate_prices(x0, m, mu, sigma, T, nmc):
     return prices_list
 
 
-def mc_on_prices(params_dict, prices_list, x0, mus, graph, n_mc, p, vals, distrib, save_out=os.getcwd() + "/Simulations/", title=""):
+def mc_on_prices(params_dict, prices_list, x0, mus, graph, n_mc, p, vals, distrib, save_out=os.getcwd() + "/Simulations/", title="", count_init=0):
     mc_list_prices = []
-    count = 0
+    count = count_init
     pathlib.Path(save_out).mkdir(parents=True, exist_ok=True)
     for prices in prices_list:
         newlist = mc_on_graphs(params_dict, prices, x0, mus, graph, n_mc, p, vals, distrib)
