@@ -32,6 +32,24 @@ def avg_indegree_from_file(file):
     return avg_indegree
 
 
+def in_degrees_from_files(file):
+    content = pickle.load(open(file, "rb"))
+    return content[1]
+
+
+def mc_indegree_from_folder(folder):
+    first = True
+    count = 0
+    for file in os.listdir(folder):
+        indegree = in_degrees_from_files(folder + file)
+        if first:
+            avg = indegree.copy()
+            first = False
+        else :
+            avg += cdf_defaulting
+        count += 1
+    return (1 / count) * avg
+
 
 def average_cdf_defaulting_from_folder(folder):
     first = True
@@ -80,9 +98,11 @@ def average_indegree_from_folder(folder):
 folders_dict = dict()
 cdfs_defaults_dict = dict()
 indegree_dict = dict()
-er_ps = [0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
+# er_ps = [0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
+er_ps = [0.005, 0.02, 0.03, 0.04, 0.06, 0.07, 0.08, 0.09, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1]
 
-cdfs_defaults_dict["0.5"] = average_cdf_defaulting_from_folder(folders_dict["0.5"])
+
+# cdfs_defaults_dict["0.5"] = average_cdf_defaulting_from_folder(folders_dict["0.5"])
 
 for p in er_ps:
     folders_dict[str(p)] = "E:/Simulations/ER" + str(p) + "_Leverage10/"
@@ -104,7 +124,7 @@ cdf_defaulting01 = average_cdf_defaulting_from_folder(folder01)
 cdf_defaulting001 = average_cdf_defaulting_from_folder(folder001)
 cdf_defaulting05 = average_cdf_defaulting_from_folder(folder05)
 
-p_ers_bis = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]
+p_ers_bis = [0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1]
 for p in p_ers_bis[::-1]:
     plt.plot(cdfs_defaults_dict[str(p)], label=str(p))
 plt.legend()
