@@ -1,3 +1,13 @@
+""""*******************************************************
+ * Copyright (C) 2017-2018 Dimitri Bouche dimi.bouche@gmail.com
+ *
+ * This file is part of an ongoing research project on systemic risk @CMLA (ENS Cachan)
+ *
+ * This file can not be copied and/or distributed without the express
+ * permission of Dimitri Bouche.
+ *******************************************************"""
+
+
 import numpy as np
 import time
 from sklearn.preprocessing import normalize
@@ -15,7 +25,8 @@ class BankNetwork:
             xi,
             zeta,
             bar_E=None,
-            lambda_star=None):
+            lambda_star=None,
+            enforce_leverage=True):
         self.L = L
         self.R = R
         self.Q = Q
@@ -32,6 +43,7 @@ class BankNetwork:
         self.xi = xi
         self.zeta = zeta
         self.liquidator = False
+        self.enforce_leverage = enforce_leverage
         self.record = []
         self.defaulted = np.zeros((self.L.shape[0], ))
         self.defaulting = np.zeros((self.L.shape[0],))
@@ -40,9 +52,11 @@ class BankNetwork:
         self.cumdefaults_classic = []
         self.leverage_counter = 0
         self.classic_counter = 0
-        self.track = []
-        self.t = 0
         self.initial_value = None
+        self.in_degrees = []
+        self.out_degrees = []
+        self.t = 0
+        self.track = []
 
     def add_liquidator(self):
         n = self.L.shape[0]
@@ -101,7 +115,8 @@ class BankNetwork:
         return self.R
 
     def get_leverage(self):
-        return self.get_assets() / self.get_equities()
+        lev = self.get_assets() / self.get_equities()
+        return lev
 
     def get_defaulted(self):
         return self.defaulted
@@ -126,11 +141,14 @@ class BankNetwork:
             np.greater_equal(self.bar_E - self.get_equities(),
                              0).astype(np.int64) - self.defaulted,
             0)
-        leverages = self.get_leverage()
-        leverage_linked = np.maximum(
-            np.greater(leverages, self.lambda_star).astype(np.int64) - self.defaulted,
-            0)
-        leverage_linked = np.maximum(leverage_linked - classic, 0)
+        if self.enforce_leverage:
+            leverages = self.get_leverage()
+            leverage_linked = np.maximum(
+                np.greater(leverages, self.lambda_star).astype(np.int64) - self.defaulted,
+                0)
+            leverage_linked = np.maximum(leverage_linked - classic, 0)
+        else:
+            leverage_linked = np.zeros((self.get_n() + int(self.liquidator)))
         if self.liquidator:
             leverage_linked[0] = 0
             classic[0] = 0
@@ -252,6 +270,10 @@ class BankNetwork:
     def record_defaults(self):
         self.cumdefaults_classic.append(self.classic_counter)
         self.cumdefaults_leverage.append(self.leverage_counter)
+
+    def record_degrees(self):
+        self.in_degrees.append(np.sum(self.get_nodes_indegree()))
+        self.out_degrees.append(np.sum(self.get_nodes_outdegree()))
 
     def get_normalized_cumlosses(self):
         return np.cumsum(self.lost_value) / self.initial_value

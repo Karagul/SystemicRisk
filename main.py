@@ -5,6 +5,7 @@ import BankNetwork
 import RiskyAssets
 import importlib
 import time
+import pathlib
 import matplotlib.pyplot as plt
 
 # Local imports
@@ -14,6 +15,7 @@ import InitAnalysis as InitA
 import SimulationsTools as ST
 import Measures
 import Visualization as Viz
+import ResultsProcessing as RP
 
 
 importlib.reload(ST)
@@ -41,7 +43,7 @@ r_annual = 0.05
 params["r"] = ST.daily_compound(r_annual, 365)
 params["xi"] = 0.7
 params["zeta"] = 0.7
-params["lambda_star"] = 7
+params["lambda_star"] = 3
 
 
 ### RISKY ASSETS PARAMETERS
@@ -73,6 +75,7 @@ params["q"] = qinit.random_asset_choice()
 
 ### BALANCE SHEET INITIALIZATION PARAMETERS
 params["liquidator"] = True
+params["enforce_leverage"] = False
 # Nominal value of all loans (and debts)
 l = 1000
 params["l"] = l
@@ -90,63 +93,128 @@ params["bar_E"] = bar_e * np.ones((n, ))
 
 
 
-### RANDOM GRAPH INITIALIZATION
-# On average 1 edge out of 2 is negative and 1 out of 2 is positive
-p = 0.5
-# Values of loans and their respective probabilities
-vals = np.array([l])
+#
+# # On average 1 edge out of 2 is negative and 1 out of 2 is positive
+# p_sign = 0.5
+# # ER parameter
+# p_er = 0.5
+# # Values of loans and their respective probabilities
+# vals = np.array([2 * l / p_er])
+# distrib = np.array([1])
+# # Graph structure
+# #graph = nx.cycle_graph(n)
+# graph = nx.erdos_renyi_graph(n, p_er)
+# # graph = nx.complete_graph(n)
+# graph = GI.GraphInit(graph)
+# # Number of Monte Carlo iterations for
+# n_mc_graph = 10
+# # MC on random allocations on graph
+# start = time.time()
+# # mc_list, lev = ST.mc_on_graphs(params, prices, x0, mus, graph, n_mc_graph, p_sign, vals, distrib)
+# results = ST.iterate_periods(params, prices, x0, mus, graph, p_sign, vals, distrib)
+# end = time.time()
+# print(end - start)
+#
+#
+#
+
+
+p_sign = 0.5
 distrib = np.array([1])
-# Graph structure
-#graph = nx.cycle_graph(n)
-graph = nx.erdos_renyi_graph(n, 0.5)
-# graph = nx.complete_graph(n)
-graph = GI.GraphInit(graph)
-# Number of Monte Carlo iterations for
-n_mc_graph = 10
-# MC on random allocations on graph
+p_ers_grid = [0.01, 0.05, 0.1, 0.3, 0.6, 1.0]
+lambda_star_grid = [1, 3, 5, 7, 10]
+n_mc_prices = 1000
+prices_list = ST.generate_prices(x0, m, mu, sigma, T, n_mc_prices)
+
 start = time.time()
-mc_list = ST.mc_on_graphs(params, prices, x0, mus, graph, n_mc_graph, p, vals, distrib)
+for p_er in p_ers_grid:
+    for lamb in lambda_star_grid:
+        save_out = "/home/dimitribouche/Bureau/Simulations/p_er=" + str(p_er) + "_leverage=" + str(lamb) + ".pkl"
+        params["lambda_star"] = lamb
+        results = ST.mc_full_er(params, prices_list, x0, mus, p_er, p_sign, vals, distrib)
+        RP.pickle_dump(save_out, results)
+        print("lambda : " + str(lamb))
+        print("p_er :" + str(p_er))
 end = time.time()
+
 print(end - start)
 
 
 
 
 
-### MC on prices
-# On average 1 edge out of 2 is negative and 1 out of 2 is positive
-p = 0.5
+#
+# # On average 1 edge out of 2 is negative and 1 out of 2 is positive
+# p_sign = 0.5
+# # ER parameter
+# p_er = 0.5
+# # Values of loans and their respective probabilities
+# vals = np.array([2 * l / p_er])
+# distrib = np.array([1])
+# # Graph structure
+# lambda_star_grid = [2, 3, 4, 5, 6, 7, 8, 9, 10]
+# results_list = []
+#
+# n_mc_prices = 100
+# prices_list = ST.generate_prices(x0, m, mu, sigma, T, n_mc_prices)
+#
+# start = time.time()
+# for lamb in lambda_star_grid:
+#     params["lambda_star"] = lamb
+#     #graph = nx.cycle_graph(n)
+#     graph = nx.erdos_renyi_graph(n, p_er)
+#     # graph = nx.complete_graph(n)
+#     graph = GI.GraphInit(graph)
+#     # MC on random allocations on graph
+#     # mc_list, lev = ST.mc_on_graphs(params, prices, x0, mus, graph, n_mc_graph, p_sign, vals, distrib)
+#     results_list.append(ST.mc_on_prices(params, prices_list, x0, mus, graph, p_sign, vals, distrib))
+#     print(lamb)
+# end = time.time()
+# print(end - start)
+#
+# avg_list = [RP.average_results(mc_result, 1) for mc_result in results_list]
+#
+# plt.figure()
+# for i in range(0, 9):
+#     plt.plot(avg_list[i], label=lambda_star_grid[i])
+# plt.legend()
+#
+#
 
-#er_ps = [0.005, 0.02, 0.03, 0.04, 0.06, 0.07, 0.08, 0.09, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1]
-er_ps = [0.06, 0.07, 0.08, 0.09]
-er_ps = [0.005, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.15, 0.2, 0.25,
-         0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1]
-
-# er_ps = [0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1]
-for p_er in er_ps :
-
-# Values of loans and their respective probabilities
-    vals = np.array([2*l/p_er])
-    distrib = np.array([1])
-# Graph structure
-#graph = nx.cycle_graph(n)
-    graph = nx.erdos_renyi_graph(n, p_er)
-# graph = nx.complete_graph(n)
-    graph = GI.GraphInit(graph)
-# Number of Monte Carlo iterations for
-    n_mc_graph = 1
-    n_mc_prices = 1000
-    prices_list = ST.generate_prices(x0, m, mu, sigma, T, n_mc_prices)
-    path = "/home/dimitribouche/Bureau/Simulations/ER" + str(p_er) + "_Leverage" + str(params["lambda_star"]) + "/"
-    start = time.clock()
-#    mc_dict = ST.mc_on_prices_ergraphs(params, prices_list, x0, mus, er_ps, n_mc_graph, p, vals, distrib)
-    mc_prices = ST.mc_on_prices(params, prices_list, x0, mus, graph, n_mc_graph, p, vals, distrib, save_out=path)
-    end = time.clock()
-    print(end - start)
-
-
-
-
+# ### MC on prices
+# # On average 1 edge out of 2 is negative and 1 out of 2 is positive
+# p = 0.5
+#
+# #er_ps = [0.005, 0.02, 0.03, 0.04, 0.06, 0.07, 0.08, 0.09, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1]
+# er_ps = [0.06, 0.07, 0.08, 0.09]
+# er_ps = [0.005, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.15, 0.2, 0.25,
+#          0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1]
+#
+# # er_ps = [0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1]
+# for p_er in er_ps :
+#
+# # Values of loans and their respective probabilities
+#     vals = np.array([2*l/p_er])
+#     distrib = np.array([1])
+# # Graph structure
+# #graph = nx.cycle_graph(n)
+#     graph = nx.erdos_renyi_graph(n, p_er)
+# # graph = nx.complete_graph(n)
+#     graph = GI.GraphInit(graph)
+# # Number of Monte Carlo iterations for
+#     n_mc_graph = 1
+#     n_mc_prices = 1000
+#     prices_list = ST.generate_prices(x0, m, mu, sigma, T, n_mc_prices)
+#     path = "/home/dimitribouche/Bureau/Simulations/ER" + str(p_er) + "_Leverage" + str(params["lambda_star"]) + "/"
+#     start = time.clock()
+# #    mc_dict = ST.mc_on_prices_ergraphs(params, prices_list, x0, mus, er_ps, n_mc_graph, p, vals, distrib)
+#     mc_prices = ST.mc_on_prices(params, prices_list, x0, mus, graph, n_mc_graph, p, vals, distrib, save_out=path)
+#     end = time.clock()
+#     print(end - start)
+#
+#
+#
+#
 
 
 

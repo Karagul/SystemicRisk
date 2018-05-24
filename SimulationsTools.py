@@ -1,13 +1,23 @@
+""""*******************************************************
+ * Copyright (C) 2017-2018 Dimitri Bouche dimi.bouche@gmail.com
+ *
+ * This file is part of an ongoing research project on systemic risk @CMLA
+ *
+ * This file can not be copied and/or distributed without the express
+ * permission of Dimitri Bouche.
+ *******************************************************"""
+
+
+# Third party imports
 import numpy as np
-import BankNetwork
 import importlib
 import networkx as nx
-import os
-import pickle
+
+# Local imports
+import BankNetwork
 import BalanceSheetInit as BSI
 import GraphInit as GI
 import RiskyAssets
-import pathlib
 importlib.reload(BankNetwork)
 importlib.reload(GI)
 importlib.reload(BSI)
@@ -42,7 +52,7 @@ def balance_sheet_allocation(params_dict, L, x0, mus):
     return R, Q
 
 
-def iterate_periods(params_dict, prices, x0, mus, graph, p, vals, distrib):
+def iterate_periods(params_dict, prices, x0, mus, graph, p, vals, distrib, last_L=False):
     L = random_allocation(graph, p, vals, distrib)
     R, Q = balance_sheet_allocation(params_dict, L, x0, mus)
     # Creation of the bank network
@@ -52,21 +62,35 @@ def iterate_periods(params_dict, prices, x0, mus, graph, p, vals, distrib):
                                            params_dict["xi"],
                                            params_dict["zeta"],
                                            params_dict["bar_E"],
-                                           params_dict["lambda_star"])
+                                           params_dict["lambda_star"],
+                                           params_dict["enforce_leverage"])
     if params_dict["liquidator"]:
         bank_network.add_liquidator()
     bank_network.update_portfolios(prices[0, :])
     bank_network.compute_psi()
     bank_network.compute_pi()
     bank_network.set_initial_value()
-    for t in range(0, params_dict["T"]):
+    bank_network.record_defaults()
+    bank_network.record_degrees()
+    for t in range(0, params_dict["T"] - 1):
         bank_network.stage1(prices[t, :])
         bank_network.stage2()
         bank_network.stage3()
         bank_network.record_defaults()
-    rec_tuple = (bank_network.cumdefaults_leverage.copy(),
-                 bank_network.cumdefaults_classic.copy(),
-                 bank_network.get_normalized_cumlosses())
+        bank_network.record_degrees()
+    if last_L:
+        rec_tuple = (bank_network.cumdefaults_leverage.copy(),
+                     bank_network.cumdefaults_classic.copy(),
+                     bank_network.get_normalized_cumlosses(),
+                     bank_network.in_degrees.copy(),
+                     bank_network.out_degrees.copy(),
+                     bank_network.L.copy())
+    else :
+        rec_tuple = (bank_network.cumdefaults_leverage.copy(),
+                     bank_network.cumdefaults_classic.copy(),
+                     bank_network.get_normalized_cumlosses(),
+                     bank_network.in_degrees.copy(),
+                     bank_network.out_degrees.copy())
     return rec_tuple
 
 
@@ -75,6 +99,7 @@ def mc_on_graphs(params_dict, prices, x0, mus, graph, n_mc, p, vals, distrib):
     for s in range(0, n_mc):
         rec_tuple = iterate_periods(params_dict, prices, x0, mus, graph, p, vals, distrib)
         mc_list.append(rec_tuple)
+        print(s)
     return mc_list
 
 
@@ -91,10 +116,25 @@ def generate_prices(x0, m, mu, sigma, T, nmc):
 
 def mc_on_prices(params_dict, prices_list, x0, mus, graph, p, vals, distrib):
     mc_list_prices = []
+    counter = 0
     for prices in prices_list:
-        iterate_periods(params_dict, prices, x0, mus, graph, p, vals, distrib)
+        mc_list_prices.append(iterate_periods(params_dict, prices, x0, mus, graph, p, vals, distrib))
+        counter += 1
+        print(counter - 1)
     return mc_list_prices
 
+
+def mc_full_er(params_dict, prices_list, x0, mus, p_er, p, vals, distrib):
+    mc_list_prices = []
+    counter = 0
+    n = params_dict["n"]
+    for prices in prices_list:
+        graph = nx.erdos_renyi_graph(n, p_er)
+        graph = GI.GraphInit(graph)
+        mc_list_prices.append(iterate_periods(params_dict, prices, x0, mus, graph, p, 2 * vals / p_er, distrib))
+        counter += 1
+        print(counter - 1)
+    return mc_list_prices
 
 # def mc_on_prices(params_dict, prices_list, x0, mus, graph, n_mc, p, vals, distrib, save_out=os.getcwd() + "/Simulations/", title="", count_init=0):
 #     mc_list_prices = []
@@ -109,64 +149,64 @@ def mc_on_prices(params_dict, prices_list, x0, mus, graph, p, vals, distrib):
 #     return mc_list_prices
 
 
-def mc_on_prices_ergraphs(params_dict,
-        prices_list,
-        x0,
-        mus,
-        er_ps,
-        n_mc,
-        p,
-        vals,
-        distrib):
-    simus_dict = dict()
-    for param in er_ps:
-        graph = nx.erdos_renyi_graph(params_dict["n"], param)
-        graph = GI.GraphInit(graph)
-        simus_dict[param] = mc_on_prices(params_dict, prices_list, x0, mus, graph, n_mc, p, (2/param) * vals, distrib)
-    return simus_dict
-
-
-def compare_graphs(
-        params_dict,
-        prices,
-        x0,
-        mus,
-        graph_dict,
-        n_mc,
-        p,
-        vals,
-        distrib):
-    simus_dict = dict()
-    for key in graph_dict.keys():
-        simus_dict[key] = mc_on_graphs(
-            params_dict,
-            prices,
-            x0,
-            mus,
-            graph_dict[key],
-            n_mc,
-            p,
-            vals,
-            distrib)
-    return simus_dict
-
-
-def compare_ER_graphs(
-        params_dict,
-        prices,
-        x0,
-        mus,
-        er_ps,
-        n_mc,
-        p,
-        vals,
-        distrib):
-    simus_dict = dict()
-    for param in er_ps:
-        graph = nx.erdos_renyi_graph(params_dict["n"], param)
-        graph = GI.GraphInit(graph)
-        simus_dict[param] = mc_on_graphs(
-            params_dict, prices, x0, mus, graph, n_mc, p, vals, distrib)
-    return simus_dict
-
+# def mc_on_prices_ergraphs(params_dict,
+#         prices_list,
+#         x0,
+#         mus,
+#         er_ps,
+#         n_mc,
+#         p,
+#         vals,
+#         distrib):
+#     simus_dict = dict()
+#     for param in er_ps:
+#         graph = nx.erdos_renyi_graph(params_dict["n"], param)
+#         graph = GI.GraphInit(graph)
+#         simus_dict[param] = mc_on_prices(params_dict, prices_list, x0, mus, graph, n_mc, p, (2/param) * vals, distrib)
+#     return simus_dict
+#
+#
+# def compare_graphs(
+#         params_dict,
+#         prices,
+#         x0,
+#         mus,
+#         graph_dict,
+#         n_mc,
+#         p,
+#         vals,
+#         distrib):
+#     simus_dict = dict()
+#     for key in graph_dict.keys():
+#         simus_dict[key] = mc_on_graphs(
+#             params_dict,
+#             prices,
+#             x0,
+#             mus,
+#             graph_dict[key],
+#             n_mc,
+#             p,
+#             vals,
+#             distrib)
+#     return simus_dict
+#
+#
+# def compare_ER_graphs(
+#         params_dict,
+#         prices,
+#         x0,
+#         mus,
+#         er_ps,
+#         n_mc,
+#         p,
+#         vals,
+#         distrib):
+#     simus_dict = dict()
+#     for param in er_ps:
+#         graph = nx.erdos_renyi_graph(params_dict["n"], param)
+#         graph = GI.GraphInit(graph)
+#         simus_dict[param] = mc_on_graphs(
+#             params_dict, prices, x0, mus, graph, n_mc, p, vals, distrib)
+#     return simus_dict
+#
 
