@@ -36,8 +36,13 @@ class BankNetwork:
         self.defaulted = np.zeros((self.L.shape[0], ))
         self.defaulting = np.zeros((self.L.shape[0],))
         self.lost_value = []
+        self.cumdefaults_leverage = []
+        self.cumdefaults_classic = []
+        self.leverage_counter = 0
+        self.classic_counter = 0
         self.track = []
         self.t = 0
+        self.initial_value = None
 
     def add_liquidator(self):
         n = self.L.shape[0]
@@ -56,6 +61,9 @@ class BankNetwork:
 
     def net_loans_matrix(self):
         self.L = np.maximum(self.L - self.L.T, np.zeros(shape=self.L.shape))
+
+    def set_initial_value(self):
+        self.initial_value = np.sum(self.get_assets())
 
     def get_assets(self):
         return self.R + self.P + self.get_loans()
@@ -114,19 +122,21 @@ class BankNetwork:
         self.defaulted = np.maximum(self.defaulted, self.get_defaulting())
 
     def update_defaulting(self):
-        self.defaulting = np.greater_equal(
-            self.bar_E -
-            self.get_equities(),
-            0).astype(
-            np.int64)
-        if self.lambda_star:
-            leverages = self.get_leverage()
-            self.defaulting += np.greater(leverages,
-                                          self.lambda_star).astype(np.int64)
-            self.defaulting[self.defaulting > 1] = 1
+        classic = np.maximum(
+            np.greater_equal(self.bar_E - self.get_equities(),
+                             0).astype(np.int64) - self.defaulted,
+            0)
+        leverages = self.get_leverage()
+        leverage_linked = np.maximum(
+            np.greater(leverages, self.lambda_star).astype(np.int64) - self.defaulted,
+            0)
+        leverage_linked = np.maximum(leverage_linked - classic, 0)
         if self.liquidator:
-            self.defaulting[0] = 0
-        self.defaulting = np.maximum(self.defaulting - self.defaulted, 0)
+            leverage_linked[0] = 0
+            classic[0] = 0
+        self.leverage_counter += np.sum(leverage_linked)
+        self.classic_counter += np.sum(classic)
+        self.defaulting = leverage_linked + classic
 
     def update_portfolios(self, X):
         P = np.dot(self.Q, X)
@@ -158,9 +168,12 @@ class BankNetwork:
         for k in range(0, self.L.shape[0]):
             self.L[j, k] = 0
             self.lost_value[-1] += self.L[k, j]
+            if self.liquidator:
+                self.lost_value[-1] += (1 - self.zeta) * self.L[k, j]
             self.L[k, j] = 0
         self.Q[j, :] = np.zeros((self.Q.shape[1], ))
         self.lost_value[-1] += (1 - self.xi) * self.P[j]
+        self.lost_value[-1] -= self.R[j]
         self.P[j] = 0
         self.R[j] = 0
 
@@ -236,8 +249,15 @@ class BankNetwork:
         self.R[liq_ind:] += (self.P[liq_ind:] - new_p)
         self.P[liq_ind:] = new_p
 
+    def record_defaults(self):
+        self.cumdefaults_classic.append(self.classic_counter)
+        self.cumdefaults_leverage.append(self.leverage_counter)
+
+    def get_normalized_cumlosses(self):
+        return np.cumsum(self.lost_value) / self.initial_value
+
     def snap_record(self):
-        rec_dic = dict()
+        # rec_dic = dict()
         # rec_dic["L"] = self.L.copy()
         # rec_dic["L+"] = self.get_loans().copy()
         # rec_dic["D+"] = self.get_debts().copy()
@@ -245,12 +265,13 @@ class BankNetwork:
         # rec_dic["Q"] = self.Q.copy()
         # rec_dic["P"] = self.P.copy()
         # rec_dic["E"] = self.get_equities()
-        rec_dic["Defaulting"] = self.get_defaulting()
-        rec_dic["Lost_value"] = self.lost_value[-1]
-        rec_dic["Out_degree"] = self.get_nodes_outdegree()
-        rec_dic["In_degree"] = self.get_nodes_indegree()
+        # rec_dic["Defaulting"] = self.get_defaulting()
+        # rec_dic["Lost_value"] = self.lost_value[-1]
+        # rec_dic["Out_degree"] = self.get_nodes_outdegree()
+        # rec_dic["In_degree"] = self.get_nodes_indegree()
         # rec_dic["Defaulted"] = self.defaulted.copy()
-        self.record.append(rec_dic)
+        # self.record.append(rec_dic)
+        return 0
 
     def get_equities_record(self):
         T = len(self.record)

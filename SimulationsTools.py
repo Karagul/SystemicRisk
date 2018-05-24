@@ -42,35 +42,38 @@ def balance_sheet_allocation(params_dict, L, x0, mus):
     return R, Q
 
 
+def iterate_periods(params_dict, prices, x0, mus, graph, p, vals, distrib):
+    L = random_allocation(graph, p, vals, distrib)
+    R, Q = balance_sheet_allocation(params_dict, L, x0, mus)
+    # Creation of the bank network
+    bank_network = BankNetwork.BankNetwork(L, R, Q,
+                                           params_dict["alphas"],
+                                           params_dict["r"],
+                                           params_dict["xi"],
+                                           params_dict["zeta"],
+                                           params_dict["bar_E"],
+                                           params_dict["lambda_star"])
+    if params_dict["liquidator"]:
+        bank_network.add_liquidator()
+    bank_network.update_portfolios(prices[0, :])
+    bank_network.compute_psi()
+    bank_network.compute_pi()
+    bank_network.set_initial_value()
+    for t in range(0, params_dict["T"]):
+        bank_network.stage1(prices[t, :])
+        bank_network.stage2()
+        bank_network.stage3()
+        bank_network.record_defaults()
+    rec_tuple = (bank_network.cumdefaults_leverage.copy(),
+                 bank_network.cumdefaults_classic.copy(),
+                 bank_network.get_normalized_cumlosses())
+    return rec_tuple
+
+
 def mc_on_graphs(params_dict, prices, x0, mus, graph, n_mc, p, vals, distrib):
     mc_list = []
     for s in range(0, n_mc):
-        L = random_allocation(graph, p, vals, distrib)
-        R, Q = balance_sheet_allocation(params_dict, L, x0, mus)
-        # Creation of the bank network
-        bank_network = BankNetwork.BankNetwork(L,
-                                               R,
-                                               Q,
-                                               params_dict["alphas"],
-                                               params_dict["r"],
-                                               params_dict["xi"],
-                                               params_dict["zeta"],
-                                               params_dict["bar_E"])
-        if params_dict["liquidator"]:
-            bank_network.add_liquidator()
-        bank_network.update_portfolios(prices[0, :])
-        bank_network.compute_psi()
-        bank_network.compute_pi()
-        for t in range(0, params_dict["T"]):
-            bank_network.stage1(prices[t, :])
-            bank_network.stage2()
-            bank_network.stage3()
-            bank_network.snap_record()
-        print(s)
-        rec_tuple = (bank_network.get_defaulting_record(),
-                     bank_network.get_indegree_record(),
-                     bank_network.get_outdegree_record(),
-                     bank_network.get_lost_value())
+        rec_tuple = iterate_periods(params_dict, prices, x0, mus, graph, p, vals, distrib)
         mc_list.append(rec_tuple)
     return mc_list
 
@@ -86,17 +89,24 @@ def generate_prices(x0, m, mu, sigma, T, nmc):
     return prices_list
 
 
-def mc_on_prices(params_dict, prices_list, x0, mus, graph, n_mc, p, vals, distrib, save_out=os.getcwd() + "/Simulations/", title="", count_init=0):
+def mc_on_prices(params_dict, prices_list, x0, mus, graph, p, vals, distrib):
     mc_list_prices = []
-    count = count_init
-    pathlib.Path(save_out).mkdir(parents=True, exist_ok=True)
     for prices in prices_list:
-        newlist = mc_on_graphs(params_dict, prices, x0, mus, graph, n_mc, p, vals, distrib)
-        if n_mc == 1:
-            pickle.dump(newlist[0], open(save_out + title + "_" + str(count) + ".pkl", "wb"))
-        count += 1
-        print("Prices iterations counter : " + str(count))
+        iterate_periods(params_dict, prices, x0, mus, graph, p, vals, distrib)
     return mc_list_prices
+
+
+# def mc_on_prices(params_dict, prices_list, x0, mus, graph, n_mc, p, vals, distrib, save_out=os.getcwd() + "/Simulations/", title="", count_init=0):
+#     mc_list_prices = []
+#     count = count_init
+#     pathlib.Path(save_out).mkdir(parents=True, exist_ok=True)
+#     for prices in prices_list:
+#         newlist = mc_on_graphs(params_dict, prices, x0, mus, graph, n_mc, p, vals, distrib)
+#         if n_mc == 1:
+#             pickle.dump(newlist[0], open(save_out + title + "_" + str(count) + ".pkl", "wb"))
+#         count += 1
+#         print("Prices iterations counter : " + str(count))
+#     return mc_list_prices
 
 
 def mc_on_prices_ergraphs(params_dict,
