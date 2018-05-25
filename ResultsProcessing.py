@@ -1,6 +1,12 @@
 import pickle
 import os
 import numpy as np
+import matplotlib.pyplot as plt
+
+import matplotlib
+font = {'family': 'normal', 'weight': 'bold', 'size': 22}
+matplotlib.rc('font', **font)
+plt.style.use('seaborn-deep')
 
 
 def pickle_load(path):
@@ -34,4 +40,14 @@ def average_results_sum(mc_results, i, k):
 
 
 
+p_ers_grid = [0.01, 0.05, 0.1, 0.3, 0.6, 1.0]
+lambda_star_grid = [1, 3, 5, 7, 10]
+results_list = []
+p_er = 0.1
+for lamb in lambda_star_grid:
+    results_list.append(pickle_load(
+        "/home/dimitribouche/Bureau/Simulations/p_er=" + str(p_er) + "_leverage=" + str(lamb) + ".pkl"))
+    print(lamb)
 
+
+cumdefaults_averages = [average_results(result, 1) for result in results_list]

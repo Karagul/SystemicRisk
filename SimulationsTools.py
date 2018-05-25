@@ -133,7 +133,7 @@ def mc_full_er(params_dict, prices_list, x0, mus, p_er, p, vals, distrib):
         graph = GI.GraphInit(graph)
         mc_list_prices.append(iterate_periods(params_dict, prices, x0, mus, graph, p, 2 * vals / p_er, distrib))
         counter += 1
-        print(counter - 1)
+        # print(counter - 1)
     return mc_list_prices
 
 # def mc_on_prices(params_dict, prices_list, x0, mus, graph, n_mc, p, vals, distrib, save_out=os.getcwd() + "/Simulations/", title="", count_init=0):
