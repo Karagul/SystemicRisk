@@ -47,45 +47,45 @@ def empirical_proba_infto(mc_results, i, thresh):
 
 
 
-
-p_ers_grid = [0.01, 0.05, 0.1, 0.3, 0.6, 1.0]
-lambda_star_grid = [1, 3, 5, 7, 10]
-cumdefaults_dict = dict()
-lost_dict = dict()
-probas_dict = dict()
-for p_er in p_ers_grid:
-    for lamb in lambda_star_grid:
-        file = pickle_load("E:/Simulations/p_er=" + str(p_er) + "_leverage=" + str(lamb) + ".pkl")
-        # cumdefaults_dict[(str(p_er), str(lamb))] = average_results(file, 1)
-        # lost_dict[(str(p_er), str(lamb))] = average_results(file, 2)
-        probas_dict[(str(p_er), str(lamb))] = empirical_proba_infto(file, 1, 25)
-        print(lamb)
-    print(p_er)
-
-
-plt.figure()
-lamb = 5
-for p_er in p_ers_grid:
-    plt.plot(probas_dict[(str(p_er), str(lamb))], label="$\lambda^{\star}$=" + str(lamb) + "; p=" + str(p_er))
-    plt.legend()
-plt.show()
-
-
-
-
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt
-from matplotlib import cm
-from matplotlib.ticker import LinearLocator, FormatStrFormatter
-
-
-fig = plt.figure()
-ax = fig.gca(projection='3d')
-
-X, Y = np.meshgrid(X, Y)
-R = np.sqrt(X**2 + Y**2)
-Z = np.sin(R)
-
-# Plot the surface.
-surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm,
-                       linewidth=0, antialiased=False)
+#
+# p_ers_grid = [0.01, 0.05, 0.1, 0.3, 0.6, 1.0]
+# lambda_star_grid = [1, 3, 5, 7, 10]
+# cumdefaults_dict = dict()
+# lost_dict = dict()
+# probas_dict = dict()
+# for p_er in p_ers_grid:
+#     for lamb in lambda_star_grid:
+#         file = pickle_load("E:/Simulations/p_er=" + str(p_er) + "_leverage=" + str(lamb) + ".pkl")
+#         # cumdefaults_dict[(str(p_er), str(lamb))] = average_results(file, 1)
+#         # lost_dict[(str(p_er), str(lamb))] = average_results(file, 2)
+#         probas_dict[(str(p_er), str(lamb))] = empirical_proba_infto(file, 1, 25)
+#         print(lamb)
+#     print(p_er)
+#
+#
+# plt.figure()
+# lamb = 5
+# for p_er in p_ers_grid:
+#     plt.plot(probas_dict[(str(p_er), str(lamb))], label="$\lambda^{\star}$=" + str(lamb) + "; p=" + str(p_er))
+#     plt.legend()
+# plt.show()
+#
+#
+#
+#
+# from mpl_toolkits.mplot3d import Axes3D
+# import matplotlib.pyplot as plt
+# from matplotlib import cm
+# from matplotlib.ticker import LinearLocator, FormatStrFormatter
+#
+#
+# fig = plt.figure()
+# ax = fig.gca(projection='3d')
+#
+# X, Y = np.meshgrid(X, Y)
+# R = np.sqrt(X**2 + Y**2)
+# Z = np.sin(R)
+#
+# # Plot the surface.
+# surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm,
+#                        linewidth=0, antialiased=False)

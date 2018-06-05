@@ -36,6 +36,18 @@ def random_allocation(graph, p, vals, distrib):
     return L
 
 
+def er_random_allocation(p_er, p, vals, distrib, n):
+    graph = nx.erdos_renyi_graph(n, p_er)
+    # graph = nx.complete_graph(n)
+    graph = GI.GraphInit(graph)
+    bers = graph.generate_dibernouilli(p)
+    vals = graph.generate_loans_values(vals, distrib)
+    graph.set_loans(bers * vals)
+    # Initialization of the balance sheets
+    L = graph.get_loans_matrix()
+    return L
+
+
 def balance_sheet_allocation(params_dict, L, x0, mus):
     init_bs = BSI.BalanceSheetInit(L,
                                    params_dict["r"],
@@ -85,7 +97,50 @@ def iterate_periods(params_dict, prices, x0, mus, graph, p, vals, distrib, last_
                      bank_network.in_degrees.copy(),
                      bank_network.out_degrees.copy(),
                      bank_network.L.copy())
-    else :
+    else:
+        rec_tuple = (bank_network.cumdefaults_leverage.copy(),
+                     bank_network.cumdefaults_classic.copy(),
+                     bank_network.get_normalized_cumlosses(),
+                     bank_network.in_degrees.copy(),
+                     bank_network.out_degrees.copy())
+    return rec_tuple
+
+
+def iterate_periods_er(params_dict, prices, x0, mus, p_er, p, vals, distrib, last_L=False):
+    n = params_dict["n"]
+    L = er_random_allocation(p_er, p, vals, distrib, n)
+    R, Q = balance_sheet_allocation(params_dict, L, x0, mus)
+    # Creation of the bank network
+    bank_network = BankNetwork.BankNetwork(L, R, Q,
+                                           params_dict["alphas"],
+                                           params_dict["r"],
+                                           params_dict["xi"],
+                                           params_dict["zeta"],
+                                           params_dict["bar_E"],
+                                           params_dict["lambda_star"],
+                                           params_dict["enforce_leverage"])
+    if params_dict["liquidator"]:
+        bank_network.add_liquidator()
+    bank_network.update_portfolios(prices[0, :])
+    bank_network.compute_psi()
+    bank_network.compute_pi()
+    bank_network.set_initial_value()
+    bank_network.record_defaults()
+    bank_network.record_degrees()
+    for t in range(0, params_dict["T"] - 1):
+        bank_network.stage1(prices[t, :])
+        bank_network.stage2()
+        bank_network.stage3()
+        bank_network.record_defaults()
+        bank_network.record_degrees()
+    if last_L:
+        rec_tuple = (bank_network.cumdefaults_leverage.copy(),
+                     bank_network.cumdefaults_classic.copy(),
+                     bank_network.get_normalized_cumlosses(),
+                     bank_network.in_degrees.copy(),
+                     bank_network.out_degrees.copy(),
+                     bank_network.L.copy())
+    else:
         rec_tuple = (bank_network.cumdefaults_leverage.copy(),
                      bank_network.cumdefaults_classic.copy(),
                      bank_network.get_normalized_cumlosses(),
@@ -98,6 +153,15 @@ def mc_on_graphs(params_dict, prices, x0, mus, graph, n_mc, p, vals, distrib):
     mc_list = []
     for s in range(0, n_mc):
         rec_tuple = iterate_periods(params_dict, prices, x0, mus, graph, p, vals, distrib)
+        mc_list.append(rec_tuple)
+        print(s)
+    return mc_list
+
+
+def mc_on_er_graphs(params_dict, prices, x0, mus, p_er, n_mc, p, vals, distrib):
+    mc_list = []
+    for s in range(0, n_mc):
+        rec_tuple = iterate_periods_er(params_dict, prices, x0, mus, p_er, p, vals, distrib)
         mc_list.append(rec_tuple)
         print(s)
     return mc_list

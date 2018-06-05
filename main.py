@@ -43,7 +43,7 @@ r_annual = 0.05
 params["r"] = ST.daily_compound(r_annual, 365)
 params["xi"] = 0.7
 params["zeta"] = 0.7
-params["lambda_star"] = 3
+params["lambda_star"] = 5
 
 
 ### RISKY ASSETS PARAMETERS
@@ -55,9 +55,13 @@ mus = mu * np.ones((m, ))
 sigmas = sigma * np.ones((m, ))
 assets = RiskyAssets.AdditiveGaussian(mus, sigmas, init_val, T)
 prices = assets.generate()
-# plt.figure()
-# for i in range(0, m):
-#     plt.plot(prices[:, i])
+plt.figure()
+for i in range(0, m):
+    plt.plot(prices[:, i])
+
+
+save_out = "C:/Users/Dimitri/Desktop/Simulations/Prices.pkl"
+RP.pickle_dump(save_out, prices)
 
 
 
@@ -74,7 +78,7 @@ params["q"] = qinit.random_asset_choice()
 
 
 ### BALANCE SHEET INITIALIZATION PARAMETERS
-params["liquidator"] = True
+params["liquidator"] = False
 params["enforce_leverage"] = False
 # Nominal value of all loans (and debts)
 l = 1000
@@ -93,30 +97,49 @@ params["bar_E"] = bar_e * np.ones((n, ))
 
 
 
-#
-# # On average 1 edge out of 2 is negative and 1 out of 2 is positive
-# p_sign = 0.5
-# # ER parameter
-# p_er = 0.5
-# # Values of loans and their respective probabilities
-# vals = np.array([2 * l / p_er])
-# distrib = np.array([1])
-# # Graph structure
-# #graph = nx.cycle_graph(n)
-# graph = nx.erdos_renyi_graph(n, p_er)
-# # graph = nx.complete_graph(n)
-# graph = GI.GraphInit(graph)
-# # Number of Monte Carlo iterations for
-# n_mc_graph = 10
-# # MC on random allocations on graph
-# start = time.time()
-# # mc_list, lev = ST.mc_on_graphs(params, prices, x0, mus, graph, n_mc_graph, p_sign, vals, distrib)
-# results = ST.iterate_periods(params, prices, x0, mus, graph, p_sign, vals, distrib)
-# end = time.time()
-# print(end - start)
-#
-#
-#
+
+# On average 1 edge out of 2 is negative and 1 out of 2 is positive
+p_sign = 0.5
+# ER parameter
+p_ers_grid = 0.5
+# Values of loans and their respective probabilities
+vals = np.array([2 * l / p_er])
+distrib = np.array([1])
+# Graph structure
+#graph = nx.cycle_graph(n)
+graph = nx.erdos_renyi_graph(n, p_er)
+# graph = nx.complete_graph(n)
+graph = GI.GraphInit(graph)
+# Number of Monte Carlo iterations for
+n_mc_graph = 10
+# MC on random allocations on graph
+start = time.time()
+# mc_list, lev = ST.mc_on_graphs(params, prices, x0, mus, graph, n_mc_graph, p_sign, vals, distrib)
+results = ST.iterate_periods(params, prices, x0, mus, graph, p_sign, vals, distrib)
+end = time.time()
+print(end - start)
+
+
+
+
+p_sign = 0.5
+distrib = np.array([1])
+vals = np.array([l])
+p_ers_grid = [0.01, 0.05, 0.1, 0.3, 0.6, 1.0]
+n_mc = 1000
+
+start = time.time()
+for p_er in p_ers_grid:
+    save_out = "C:/Users/Dimitri/Desktop/Simulations/Rewiring/p_er=" + str(p_er) + "_leverage=" + str(params["lambda_star"]) + ".pkl"
+    results = ST.mc_on_er_graphs(params, prices, x0, mus, p_er, n_mc, p_sign, 2 * vals/p_er, distrib)
+    RP.pickle_dump(save_out, results)
+    print("p_er :" + str(p_er))
+end = time.time()
+
+print(end - start)
+
+
+
 
 
 p_sign = 0.5
