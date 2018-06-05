@@ -73,18 +73,24 @@ def iterate_periods(params_dict, prices, x0, mus, graph, p, vals, distrib, last_
                                            params_dict["r"],
                                            params_dict["xi"],
                                            params_dict["zeta"],
-                                           params_dict["bar_E"],
-                                           params_dict["lambda_star"],
-                                           params_dict["enforce_leverage"])
+                                           bar_E=params_dict["bar_E"],
+                                           lambda_star=params_dict["lambda_star"],
+                                           enforce_leverage=params_dict["enforce_leverage"])
     if params_dict["liquidator"]:
         bank_network.add_liquidator()
     bank_network.update_portfolios(prices[0, :])
+    # print(bank_network.defaulting)
+    # print(bank_network.get_equities())
+    bank_network.update_defaulted()
+    bank_network.update_defaulting()
     bank_network.compute_psi()
     bank_network.compute_pi()
     bank_network.set_initial_value()
     bank_network.record_defaults()
     bank_network.record_degrees()
-    for t in range(0, params_dict["T"] - 1):
+    # print(bank_network.defaulting)
+    # print(bank_network.get_equities())
+    for t in range(1, params_dict["T"]):
         bank_network.stage1(prices[t, :])
         bank_network.stage2()
         bank_network.stage3()
@@ -96,6 +102,7 @@ def iterate_periods(params_dict, prices, x0, mus, graph, p, vals, distrib, last_
                      bank_network.get_normalized_cumlosses(),
                      bank_network.in_degrees.copy(),
                      bank_network.out_degrees.copy(),
+                     bank_network.firesale_coefs.copy(),
                      bank_network.L.copy())
     else:
         rec_tuple = (bank_network.cumdefaults_leverage.copy(),
@@ -145,7 +152,8 @@ def iterate_periods_er(params_dict, prices, x0, mus, p_er, p, vals, distrib, las
                      bank_network.cumdefaults_classic.copy(),
                      bank_network.get_normalized_cumlosses(),
                      bank_network.in_degrees.copy(),
-                     bank_network.out_degrees.copy())
+                     bank_network.out_degrees.copy(),
+                     bank_network.firesale_coefs.copy())
     return rec_tuple
 
 

@@ -24,6 +24,7 @@ class BankNetwork:
             r,
             xi,
             zeta,
+            theta=-np.log(0.1),
             bar_E=None,
             lambda_star=None,
             enforce_leverage=True):
@@ -46,7 +47,7 @@ class BankNetwork:
         self.enforce_leverage = enforce_leverage
         self.record = []
         self.defaulted = np.zeros((self.L.shape[0], ))
-        self.defaulting = np.zeros((self.L.shape[0],))
+        self.defaulting = np.zeros((self.L.shape[0], ))
         self.lost_value = []
         self.cumdefaults_leverage = []
         self.cumdefaults_classic = []
@@ -57,6 +58,9 @@ class BankNetwork:
         self.out_degrees = []
         self.t = 0
         self.track = []
+        self.liquidated_volume = 0
+        self.theta = theta
+        self.firesale_coefs = []
 
     def add_liquidator(self):
         n = self.L.shape[0]
@@ -152,6 +156,7 @@ class BankNetwork:
         if self.liquidator:
             leverage_linked[0] = 0
             classic[0] = 0
+        # print(classic)
         self.leverage_counter += np.sum(leverage_linked)
         self.classic_counter += np.sum(classic)
         self.defaulting = leverage_linked + classic
@@ -177,7 +182,10 @@ class BankNetwork:
         self.Psi = normalize(self.L, axis=0, norm="l1")
 
     def compute_pi(self):
+        # firesale_coef = np.exp(-self.theta * self.liquidated_volume)
+        # self.firesale_coefs.append(firesale_coef)
         common = self.xi * self.P + self.R
+        #common = firesale_coef * self.P + self.R
         self.Pi = common + int(self.liquidator) * \
             self.zeta * self.non_default_loans()
         self.Pi *= self.get_defaulting()
@@ -212,12 +220,16 @@ class BankNetwork:
     def loans_rewiring(self):
         start = time.clock()
         defaulting = self.get_defaulting()
+        # if sum(defaulting) != 0:
+        #     print(defaulting)
+        #     print(self.Psi * defaulting)
         self.L += np.dot(self.Psi * defaulting, self.L)
         end = time.clock()
         self.track.append(end - start)
 
     def zero_out_defaulting(self):
         defaulting = self.get_defaulting()
+        # print(defaulting)
         defaulting_index = np.argwhere(defaulting == 1)
         for j in defaulting_index:
             self.zero_out(j)
@@ -237,6 +249,11 @@ class BankNetwork:
         non_defaulting = self.get_non_defaulting()
         return pnew * non_defaulting[liq_ind:]
 
+    def compute_liquidated_volume(self):
+        frac_liquidated = np.sum(self.defaulting.reshape((self.get_n(), 1)) * self.Q)
+        total = np.sum(self.Q)
+        self.liquidated_volume = frac_liquidated / total
+
     def stage1(self, X):
         self.t += 1
         self.lost_value.append(0)
@@ -244,25 +261,34 @@ class BankNetwork:
             self.update_liquidator()
         else:
             self.loans_rewiring()
+        # print(self.P)
         self.zero_out_defaulting()
+        self.net_loans_matrix()
+        # print(self.P)
         self.all_updates(X)
+        # print("updated")
+        # print(self.P)
         self.update_defaulted()
         self.update_defaulting()
 
     def stage2(self):
+        self.compute_liquidated_volume()
         self.compute_pi()
         self.compute_psi()
 
     def stage3(self):
         liq_ind = int(self.liquidator)
         new_p = self.managed_portfolio()
+        # print(new_p)
         management_vec = 1 + \
             (1 / self.P[liq_ind:]) * (new_p - self.P[liq_ind:])
         np.place(management_vec, np.isnan(management_vec), 0)
         np.place(management_vec, np.isinf(management_vec), 0)
+        # print(self.P)
         management_matrix = np.repeat(
             management_vec.reshape(
                 (self.get_n(), 1)), self.get_m(), axis=1)
+        #print(management_matrix)
         self.Q[liq_ind:, :] *= management_matrix
         self.R[liq_ind:] += (self.P[liq_ind:] - new_p)
         self.P[liq_ind:] = new_p
