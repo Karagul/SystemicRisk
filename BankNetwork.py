@@ -60,7 +60,7 @@ class BankNetwork:
         self.track = []
         self.liquidated_volume = 0
         self.theta = theta
-        self.firesale_coefs = []
+        self.firesale_coef = 1.0
 
     def add_liquidator(self):
         n = self.L.shape[0]
@@ -182,24 +182,30 @@ class BankNetwork:
         self.Psi = normalize(self.L, axis=0, norm="l1")
 
     def compute_pi(self):
-        # firesale_coef = np.exp(-self.theta * self.liquidated_volume)
-        # self.firesale_coefs.append(firesale_coef)
-        common = self.xi * self.P + self.R
-        #common = firesale_coef * self.P + self.R
+        if self.theta:
+            self.firesale_coef = np.exp(-self.theta * self.liquidated_volume)
+        else:
+            self.firesale_coef = self.xi
+        common = self.firesale_coef * self.P + self.R
         self.Pi = common + int(self.liquidator) * \
             self.zeta * self.non_default_loans()
         self.Pi *= self.get_defaulting()
 
     def zero_out(self, j):
         for k in range(0, self.L.shape[0]):
-            self.L[j, k] = 0
-            self.lost_value[-1] += self.L[k, j]
+            toadd = self.L[k, j]
+            if not np.isnan(toadd):
+                self.lost_value[-1] += toadd
             if self.liquidator:
-                self.lost_value[-1] += (1 - self.zeta) * self.L[k, j]
+                toadd = self.zeta * self.L[j, k]
+                if not np.isnan(toadd):
+                    self.lost_value[-1] += toadd
+            self.L[j, k] = 0
             self.L[k, j] = 0
         self.Q[j, :] = np.zeros((self.Q.shape[1], ))
-        self.lost_value[-1] += (1 - self.xi) * self.P[j]
-        self.lost_value[-1] -= self.R[j]
+        toadd = self.firesale_coef * self.P[j]
+        if not np.isnan(toadd):
+            self.lost_value[-1] += toadd
         self.P[j] = 0
         self.R[j] = 0
 
@@ -263,6 +269,8 @@ class BankNetwork:
             self.loans_rewiring()
         # print(self.P)
         self.zero_out_defaulting()
+        # print(str(self.t) +" : " +  str(np.sum(self.Pi)))
+        # print(str(self.t) + " : " + str(self.lost_value[-1]))
         self.net_loans_matrix()
         # print(self.P)
         self.all_updates(X)

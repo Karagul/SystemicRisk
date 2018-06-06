@@ -48,7 +48,8 @@ r_annual = 0.05
 params["r"] = ST.daily_compound(r_annual, 365)
 params["xi"] = 0.7
 params["zeta"] = 0.7
-params["lambda_star"] = 3
+params["theta"] = - np.log(0.2)
+params["lambda_star"] = 5
 
 
 ### RISKY ASSETS PARAMETERS
@@ -120,8 +121,45 @@ results = ST.iterate_periods(params, prices, x0, mus, graph, p_sign, vals, distr
 end = time.time()
 print(end - start)
 
-# #
-#
+
+
+
+p_sign = 0.5
+distrib = np.array([1])
+vals = np.array([l])
+p_ers_grid = [0.01, 0.05, 0.1, 0.3, 0.6, 1.0]
+# lambda_star_grid = [1, 3, 5, 7, 10]
+# p_ers_grid = [0.01, 0.05, 0.1, 0.3, 0.6, 1.0]
+# lambda_star_grid = [3, 5, 7.5, 10]
+# p_ers_grid = [0.6, 1.0]
+# lambda_star_grid = [5, 10]
+# p_ers_grid = [0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+# lambda_star_grid = [2, 3, 4, 5, 7.5, 10]
+n_mc_prices = 100
+prices_list = ST.generate_prices(x0, m, mu, sigma, T, n_mc_prices)
+
+start = time.time()
+for p_er in p_ers_grid:
+    save_out = "/home/dimitribouche/Bureau/SimulationsShort/Rewiring/p_er=" + str(p_er) + "_leverage=" + str(params["lambda_star"]) + ".pkl"
+    # save_out = "/home/dimitribouche/Bureau/TestsSimus/p_er=" + str(p_er) + "_leverage=" + str(
+    #     lamb) + ".pkl"
+    results = ST.mc_full_er(params, prices_list, x0, mus, p_er, p_sign, vals, distrib)
+    pickle_dump(save_out, results)
+    print("p_er :" + str(p_er))
+end = time.time()
+
+print(end - start)
+
+
+
+
+
+
+
+
+
+
+
 
 
 p_sign = 0.5

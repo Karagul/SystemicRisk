@@ -87,12 +87,27 @@ def systemic_threshold_time(probas_dict, thresh):
     return systemic_dict
 
 
+def get_dicts_from_folder(path, p_er, lamb):
+    try:
+        file = pickle_load(path + "p_er=" + str(p_er) + "_leverage=" + str(lamb) + ".pkl")
+        cumdefaults = average_results(file, 1)
+        lost = average_results(file, 2)
+        probas = empirical_proba_infto(file, 1, 25)
+        degrees = average_results_sum(file, 3, 4)
+        return [cumdefaults, lost, probas, degrees]
+    except FileNotFoundError:
+        print("File not found")
+        return 0
 
 
 
-p_ers_grid = [0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-lambda_star_grid = [2, 3, 4, 5, 7.5, 10]
-# p_ers_grid = [0.01, 0.05, 0.1, 0.3, 0.6, 1.0]
+
+
+path = "/home/dimitribouche/Bureau/SimulationsShort/Rewiring/"
+# p_ers_grid = [0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+# lambda_star_grid = [2, 3, 4, 5, 7.5, 10]
+p_ers_grid = [0.01, 0.05, 0.1, 0.3, 0.6, 1.0]
+lambda_star_grid = [5]
 # p_ers_bis = p_ers_grid
 # lambda_star_grid = [3, 5, 7.5, 10]
 # p_ers_grid = [0.6, 1.0]
@@ -103,15 +118,11 @@ probas_dict = dict()
 degrees_dict = dict()
 for p_er in p_ers_grid:
     for lamb in lambda_star_grid:
-        # file = pickle_load("/home/dimitribouche/Bureau/Simulations/FullRun/p_er=" + str(p_er) + "_leverage=" + str(lamb) + ".pkl")
-        file = pickle_load(
-            "/home/dimitribouche/Bureau/Simulations/Rewiring/p_er=" + str(p_er) + "_leverage=" + str(lamb) + ".pkl")
-        # file = pickle_load(
-        #     "/home/dimitribouche/Bureau/TestsSimus/p_er=" + str(p_er) + "_leverage=" + str(lamb) + ".pkl")
-        cumdefaults_dict[(str(p_er), str(lamb))] = average_results(file, 1)
-        lost_dict[(str(p_er), str(lamb))] = average_results(file, 2)
-        probas_dict[(str(p_er), str(lamb))] = empirical_proba_infto(file, 1, 25)
-        degrees_dict[(str(p_er), str(lamb))] = average_results_sum(file, 3, 4)
+        indlist = get_dicts_from_folder(path, p_er, lamb)
+        cumdefaults_dict[(str(p_er), str(lamb))] = indlist[0]
+        lost_dict[(str(p_er), str(lamb))] = indlist[1]
+        probas_dict[(str(p_er), str(lamb))] = indlist[2]
+        degrees_dict[(str(p_er), str(lamb))] = indlist[3]
         print(lamb)
     print(p_er)
 
@@ -129,11 +140,11 @@ pickle_dump("/home/dimitribouche/Bureau/Simulations/Rewiring/Computations/degree
 
 cumdefaults_dict = pickle_load("/home/dimitribouche/Bureau/Simulations/Computations/cumdefaults_dict.pkl")
 
-p_ers_bis = [0.01, 0.025, 0.05, 0.075, 0.1, 0.4, 0.7, 1.0]
+# p_ers_bis = [0.01, 0.025, 0.05, 0.075, 0.1, 0.4, 0.7, 1.0]
 plt.figure()
 lamb = 5
-for p_er in p_ers_bis[::-1]:
-    plt.plot(cumdefaults_dict[(str(p_er), str(lamb))], label="$\lambda^{\star}$=" + str(lamb) + "; p=" + str(p_er))
+for p_er in p_ers_grid[::-1]:
+    plt.plot(lost_dict[(str(p_er), str(lamb))], label="$\lambda^{\star}$=" + str(lamb) + "; p=" + str(p_er))
     plt.legend()
 plt.subplots_adjust(top=0.92,
                     bottom=0.095,
