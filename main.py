@@ -27,8 +27,14 @@ importlib.reload(InitA)
 importlib.reload(Viz)
 importlib.reload(BSI)
 
+
 def pickle_dump(path, obj):
     pickle.dump(obj, open(path, "wb"))
+
+
+def pickle_load(path):
+    return pickle.load(open(path, "rb"))
+
 
 
 
@@ -57,15 +63,15 @@ x0 = 10
 mu = 0.01
 sigma = 0.3
 init_val = x0 * np.ones((m, ))
-mus = mu * np.ones((m, ))
-sigmas = sigma * np.ones((m, ))
+# mus = mu * np.ones((m, ))
+mus = np.array([0.01, 0.01])
+# sigmas = sigma * np.ones((m, ))
+sigmas = np.array([0.3, 0.3])
 assets = RiskyAssets.AdditiveGaussian(mus, sigmas, init_val, T)
 prices = assets.generate()
 plt.figure()
 for i in range(0, m):
     plt.plot(prices[:, i])
-
-
 
 ### CHOICE OF RISKY ASSETS
 # Max diversification
@@ -80,7 +86,7 @@ params["q"] = qinit.random_asset_choice()
 
 
 ### BALANCE SHEET INITIALIZATION PARAMETERS
-params["liquidator"] = False
+params["liquidator"] = True
 params["enforce_leverage"] = False
 # Nominal value of all loans (and debts)
 l = 1000
@@ -105,7 +111,8 @@ p_sign = 0.5
 # ER parameter
 p_er = 0.5
 # Values of loans and their respective probabilities
-vals = np.array([2 * l / p_er])
+# vals = np.array([2 * l / p_er])
+vals = np.array([l])
 distrib = np.array([1])
 # Graph structure
 #graph = nx.cycle_graph(n)
@@ -117,9 +124,39 @@ n_mc_graph = 10
 # MC on random allocations on graph
 start = time.time()
 # mc_list, lev = ST.mc_on_graphs(params, prices, x0, mus, graph, n_mc_graph, p_sign, vals, distrib)
-results = ST.iterate_periods(params, prices, x0, mus, graph, p_sign, vals, distrib)
+# results = ST.iterate_periods(params, prices, x0, mus, graph, p_sign, vals, distrib)
+mc_graph = ST.mc_on_er_graphs(params, prices, x0, mus, p_er, n_mc_graph, p_sign, vals, distrib)
 end = time.time()
 print(end - start)
+
+
+p_sign = 0.5
+distrib = np.array([1])
+vals = np.array([l])
+p_ers_grid = [0.01, 0.05, 0.1, 0.3, 0.6, 1.0]
+# lambda_star_grid = [1, 3, 5, 7, 10]
+# p_ers_grid = [0.01, 0.05, 0.1, 0.3, 0.6, 1.0]
+# lambda_star_grid = [3, 5, 7.5, 10]
+# p_ers_grid = [0.6, 1.0]
+# lambda_star_grid = [5, 10]
+# p_ers_grid = [0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+# lambda_star_grid = [2, 3, 4, 5, 7.5, 10]
+n_mc_graph = 1000
+
+start = time.time()
+for p_er in p_ers_grid:
+    save_out = "/home/dimitribouche/Bureau/SimulationsShort/Liquidator/p_er=" + str(p_er) + "_leverage=" + str(params["lambda_star"]) + ".pkl"
+    # save_out = "/home/dimitribouche/Bureau/TestsSimus/p_er=" + str(p_er) + "_leverage=" + str(
+    #     lamb) + ".pkl"
+    # results = ST.mc_full_er(params, prices_list, x0, mus, p_er, p_sign, vals, distrib)
+    results = ST.mc_on_er_graphs(params, prices, x0, mus, p_er, n_mc_graph, p_sign, vals, distrib)
+    pickle_dump(save_out, results)
+    print("p_er :" + str(p_er))
+end = time.time()
+
+print(end - start)
+
+
 
 
 

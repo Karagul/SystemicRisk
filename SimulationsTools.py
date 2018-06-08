@@ -89,6 +89,7 @@ def iterate_periods(params_dict, prices, x0, mus, graph, p, vals, distrib, last_
     bank_network.set_initial_value()
     bank_network.record_defaults()
     bank_network.record_degrees()
+    bank_network.record_assets()
     # print(bank_network.defaulting)
     # print(bank_network.get_equities())
     for t in range(1, params_dict["T"]):
@@ -110,7 +111,8 @@ def iterate_periods(params_dict, prices, x0, mus, graph, p, vals, distrib, last_
                      bank_network.cumdefaults_classic.copy(),
                      bank_network.get_normalized_cumlosses(),
                      bank_network.in_degrees.copy(),
-                     bank_network.out_degrees.copy())
+                     bank_network.out_degrees.copy(),
+                     bank_network.get_assets_record())
     return rec_tuple
 
 
@@ -136,6 +138,7 @@ def iterate_periods_er(params_dict, prices, x0, mus, p_er, p, vals, distrib, las
     bank_network.set_initial_value()
     bank_network.record_defaults()
     bank_network.record_degrees()
+    bank_network.record_assets()
     for t in range(0, params_dict["T"] - 1):
         bank_network.stage1(prices[t, :])
         bank_network.stage2()
@@ -155,6 +158,7 @@ def iterate_periods_er(params_dict, prices, x0, mus, p_er, p, vals, distrib, las
                      bank_network.get_normalized_cumlosses(),
                      bank_network.in_degrees.copy(),
                      bank_network.out_degrees.copy())
+                     # bank_network.get_assets_record())
     return rec_tuple
 
 
@@ -169,8 +173,11 @@ def mc_on_graphs(params_dict, prices, x0, mus, graph, n_mc, p, vals, distrib):
 
 def mc_on_er_graphs(params_dict, prices, x0, mus, p_er, n_mc, p, vals, distrib):
     mc_list = []
+    n = params_dict["n"]
     for s in range(0, n_mc):
-        rec_tuple = iterate_periods_er(params_dict, prices, x0, mus, p_er, p, vals, distrib)
+        graph = nx.erdos_renyi_graph(n, p_er)
+        graph = GI.GraphInit(graph)
+        rec_tuple = iterate_periods(params_dict, prices, x0, mus, graph, p, 2 * vals / p_er, distrib)
         mc_list.append(rec_tuple)
         print(s)
     return mc_list

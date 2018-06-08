@@ -2,7 +2,7 @@ import pickle
 import os
 import numpy as np
 import matplotlib
-matplotlib.rcParams.update({'font.size': 20,
+matplotlib.rcParams.update({'font.size': 18,
                             'font.weight': "medium",
                             'figure.titleweight': "semibold",
                             'lines.linewidth': 3,
@@ -100,6 +100,42 @@ def get_dicts_from_folder(path, p_er, lamb):
         return 0
 
 
+def concat_vectors_byperiod(mc_results, i):
+    s = len(mc_results)
+    assets_tuple = tuple([mc_results[j][i] for j in range(0, s)])
+    return np.concatenate(assets_tuple, axis=0)
+
+
+def average_vectors_byperiod(mc_results, i):
+    s = len(mc_results)
+    avg = np.zeros(mc_results[0][i].shape)
+    for j in range(0, s) :
+        avg += mc_results[j][i]
+    return avg / s
+
+
+def get_iterative_hist(mc_results, i, nbins):
+    mat = concat_vectors_byperiod(mc_results, i)
+    #mat = average_vectors_byperiod(mc_results, i)
+    T = mat.shape[1]
+    histmat = np.zeros((nbins, T))
+    for t in range(0, T):
+        if t == 0:
+            hist, bins = np.histogram(mat[:, t], nbins)
+            histmat[:, t] = hist
+        else:
+            hist, bins = np.histogram(mat[:, t], bins)
+            histmat[:, t] = hist
+    return histmat, bins
+
+
+def iterative_hist_to3d(histmat, bins):
+    middle_bins = np.array([(bins[i] + bins[i+1]) / 2 for i in range(0, bins.shape[0]-1)])
+    T = histmat.shape[1]
+    periods = np.arange(0, T, 1)
+    X, Y = np.meshgrid(middle_bins, periods)
+    Z = histmat
+    return X, Y, Z.T
 
 
 
@@ -126,6 +162,28 @@ for p_er in p_ers_grid:
         print(lamb)
     print(p_er)
 
+path = "/home/dimitribouche/Bureau/SimulationsShort/Liquidator/"
+# p_ers_grid = [0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+# lambda_star_grid = [2, 3, 4, 5, 7.5, 10]
+p_ers_grid = [0.01, 0.05, 0.1, 0.3, 0.6, 1.0]
+lambda_star_grid = [5]
+# p_ers_bis = p_ers_grid
+# lambda_star_grid = [3, 5, 7.5, 10]
+# p_ers_grid = [0.6, 1.0]
+# lambda_star_grid = [5, 10]
+cumdefaults_dict_liq = dict()
+lost_dict_liq = dict()
+probas_dict_liq = dict()
+degrees_dict_liq = dict()
+for p_er in p_ers_grid:
+    for lamb in lambda_star_grid:
+        indlist = get_dicts_from_folder(path, p_er, lamb)
+        cumdefaults_dict_liq[(str(p_er), str(lamb))] = indlist[0]
+        lost_dict_liq[(str(p_er), str(lamb))] = indlist[1]
+        probas_dict_liq[(str(p_er), str(lamb))] = indlist[2]
+        degrees_dict_liq[(str(p_er), str(lamb))] = indlist[3]
+        print(lamb)
+    print(p_er)
 
 # pickle_dump("/home/dimitribouche/Bureau/Simulations/Computations/proba25_dict.pkl", probas_dict)
 # pickle_dump("/home/dimitribouche/Bureau/Simulations/Computations/lost_dict.pkl", lost_dict)
@@ -136,9 +194,35 @@ pickle_dump("/home/dimitribouche/Bureau/Simulations/Rewiring/Computations/cumdef
 pickle_dump("/home/dimitribouche/Bureau/Simulations/Rewiring/Computations/proba25_dict.pkl", probas_dict)
 pickle_dump("/home/dimitribouche/Bureau/Simulations/Rewiring/Computations/lost_dict.pkl", lost_dict)
 pickle_dump("/home/dimitribouche/Bureau/Simulations/Rewiring/Computations/degrees_dict.pkl", degrees_dict)
-
-
 cumdefaults_dict = pickle_load("/home/dimitribouche/Bureau/Simulations/Computations/cumdefaults_dict.pkl")
+
+
+
+fig, axes = plt.subplots(3, sharex=True)
+for p_er in p_ers_grid[::-1]:
+    axes[0].plot(lost_dict[(str(p_er), str(lamb))], label="$\lambda^{\star}$=" + str(lamb) + "; p=" + str(p_er))
+    axes[0].legend(loc=1)
+    axes[0].set_title("Internal settlement")
+    axes[0].set_ylabel("Lost value")
+    axes[1].plot(lost_dict_liq[(str(p_er), str(lamb))], label="$\lambda^{\star}$=" + str(lamb) + "; p=" + str(p_er))
+    axes[1].legend(loc=1)
+    axes[1].set_title("Liquidator")
+    axes[1].set_ylabel("Lost value")
+
+prices = pickle_load("/home/dimitribouche/Bureau/SimulationsShort/Catastrophic.pkl")
+axes[2].set_title("Price scenario")
+axes[2].set_xlabel("Period")
+axes[2].set_ylabel("Price")
+for i in range(0, prices.shape[1]):
+    axes[2].plot(prices[:, i], c="#95a5a6")
+
+plt.subplots_adjust(top=0.961,
+                    bottom=0.062,
+                    left=0.047,
+                    right=0.994,
+                    hspace=0.15,
+                    wspace=0.2)
+
 
 # p_ers_bis = [0.01, 0.025, 0.05, 0.075, 0.1, 0.4, 0.7, 1.0]
 plt.figure()

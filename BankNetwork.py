@@ -61,6 +61,7 @@ class BankNetwork:
         self.liquidated_volume = 0
         self.theta = theta
         self.firesale_coef = 1.0
+        self.assets = []
 
     def add_liquidator(self):
         n = self.L.shape[0]
@@ -256,7 +257,7 @@ class BankNetwork:
         return pnew * non_defaulting[liq_ind:]
 
     def compute_liquidated_volume(self):
-        frac_liquidated = np.sum(self.defaulting.reshape((self.get_n(), 1)) * self.Q)
+        frac_liquidated = np.sum(self.defaulting.reshape((self.get_n() + int(self.liquidator), 1)) * self.Q)
         total = np.sum(self.Q)
         self.liquidated_volume = frac_liquidated / total
 
@@ -300,6 +301,7 @@ class BankNetwork:
         self.Q[liq_ind:, :] *= management_matrix
         self.R[liq_ind:] += (self.P[liq_ind:] - new_p)
         self.P[liq_ind:] = new_p
+        self.record_assets()
 
     def record_defaults(self):
         self.cumdefaults_classic.append(self.classic_counter)
@@ -308,6 +310,16 @@ class BankNetwork:
     def record_degrees(self):
         self.in_degrees.append(np.sum(self.get_nodes_indegree()))
         self.out_degrees.append(np.sum(self.get_nodes_outdegree()))
+
+    def record_assets(self):
+        self.assets.append(self.get_assets())
+
+    def get_assets_record(self):
+        T = len(self.assets)
+        liq_ind = int(self.liquidator)
+        assets_tuple = tuple([self.assets[t].reshape((self.get_n() + liq_ind, 1)) for t in range(0, T)])
+        return np.concatenate(assets_tuple, axis=1)
+
 
     def get_normalized_cumlosses(self):
         return np.cumsum(self.lost_value) / self.initial_value
